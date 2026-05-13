@@ -1,0 +1,56 @@
+# npm Trusted Publishing Scaffold
+#
+# STATUS: DISABLED — manual workflow_dispatch only
+#
+# HOW TO ENABLE (do this in order):
+#   1. First publish must be done MANUALLY:
+#        npm login
+#        cd packages/skills-cli
+#        npm publish --access public
+#   2. After first publish, configure Trusted Publisher on npmjs.com:
+#        Package: @gravity/skills
+#        Org: gravityforms
+#        Repo: gravityskills
+#        Workflow: npm-publish.yml
+#   3. This workflow can then be triggered manually for subsequent releases.
+# WHY NO NPM_TOKEN: Trusted publishing uses GitHub OIDC (id-token: write)
+# to mint a short-lived publish token at runtime. No stored secrets needed.
+# See: https://docs.npmjs.com/trusted-publishers/
+
+name: Publish to npm
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.0.8
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.x'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build CLI
+        run: pnpm --filter @gravity/skills build
+
+      - name: Test CLI
+        run: pnpm --filter @gravity/skills test
+
+      - name: Publish to npm
+        run: npm publish --access public
+        working-directory: packages/skills-cli
