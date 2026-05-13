@@ -1,0 +1,20 @@
+{
+  "active_plan": "/Users/faction23/Projects/gravity/gravityskills/.sisyphus/plans/skills-repo-framework.md",
+  "started_at": "2026-05-13T13:05:31.787Z",
+  "session_ids": [
+    "ses_1deaab1ceffezTzEEWrUlWMQbr",
+    "ses_1de8e267affePUc0rgTpYoD5dH"
+  ],
+  "plan_name": "skills-repo-framework",
+  "agent": "atlas",
+  "task_sessions": {
+    "todo:1": {
+      "task_key": "todo:1",
+      "task_label": "1",
+      "task_title": "Runtime + pnpm Workspace Foundation",
+      "session_id": "ses_1de8e267affePUc0rgTpYoD5dH",
+      "agent": "build",
+      "updated_at": "2026-05-13T13:07:26.733Z"
+    }
+  }
+}

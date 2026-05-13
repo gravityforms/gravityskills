@@ -1,0 +1,15 @@
+{
+  "name": "gravityskills",
+  "private": true,
+  "packageManager": "pnpm@11.0.8",
+  "engines": {
+    "node": "24.11.1",
+    "npm": "11.6.2"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "skills:validate": "node --import tsx/esm scripts/validate-skills.ts",
+    "skills:pack": "node --import tsx/esm scripts/pack-skills.ts"
+  }
+}
