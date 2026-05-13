@@ -199,7 +199,7 @@ Example — GDPR consent checkbox:
 }
 ```
 
-**Note:** `checkboxLabel` and `description` persist through GFAPI but are not exposed by `system-field-types` (covered by limitation #5).
+**Note:** `checkboxLabel` and `description` persist through GFAPI but are not exposed by `system-field-types` — the agent skill's field-config reference is the only source for these properties.
 
 ### Text / Paragraph (`type: text`, `type: textarea`)
 

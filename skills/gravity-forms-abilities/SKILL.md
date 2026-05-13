@@ -115,9 +115,9 @@ Use `{admin_email}` for site admin, or a specific address. `{all_fields}` render
 3. Call `submissions-submit`
 4. Check `is_valid` in response — if false, read `validation_messages`
 
-For most compound fields (name, address), use sub-input keys such as `input_{field_id}_{suffix}`. Period form (`input_{field_id}.{suffix}`) is also accepted by GFAPI for standard multi-input fields.
+For most compound fields (name, address), use dot-notation sub-input keys: `input_{field_id}.{suffix}` (e.g., `input_5.3` for First Name on field 5). This is the canonical format matching how GF stores sub-input IDs internally.
 
-**Time fields are the exception:** submit the whole field as an array-style value via sibling keys that the bridge will normalize, e.g. `input_6_1`, `input_6_2`, `input_6_3` for Hour / Minute / AM-PM. Do not conclude a time field is broken until you've tested those three sub-inputs together on a clean form.
+**Time fields are the exception:** submit via underscore-style sibling keys that the bridge normalizes: `input_6_1`, `input_6_2`, `input_6_3` for Hour / Minute / AM-PM. This underscore format is specific to time fields only — all other compound fields use dot notation. Do not conclude a time field is broken until you've tested those three sub-inputs together on a clean form.
 
 For **multiselect fields**, pass values as an array: `"input_3": ["Red", "Blue"]`. Never use comma-separated strings — values containing commas cause data loss.
 
@@ -326,7 +326,7 @@ For CL structure details, operators, and common patterns, see [references/condit
 | Creating a form without `notifications` | Submissions saved but no email sent — admin never notified | Always include a notification object — see "Creating a Form" workflow |
 | Creating a name field without `nameFormat: "advanced"` | First/Last sub-inputs render stacked vertically instead of side-by-side | Always set `"nameFormat": "advanced"` and `"size": "large"` on name fields — see field-config reference |
 | Passing multiselect values as comma-separated string | Data loss when values contain commas (e.g., "Atlanta, GA") | Always pass multiselect values as an **array**: `"input_1": ["Red", "Blue"]` — see field-config reference |
-| User asks to "create a form and add it to a page" | Cannot create WordPress pages/posts — only GF abilities exist | Create the form, then tell the user the shortcode `[gravityform id="X" title="true"]` to embed manually. Page creation is a WP Abilities API gap (planned for WP 6.9+). |
+| User asks to "create a form and add it to a page" | Cannot create WordPress pages/posts — only GF abilities exist | Create the form, then tell the user the shortcode `[gravityform id="X" title="true"]` to embed manually. Page/post creation is not currently available via the Abilities API. |
 | Write ability not found (e.g., `forms-create`) | Site admin has not enabled Write Access in MCP settings | Inform the user that write access must be enabled in GF Settings → MCP before write operations are available. Do not attempt workarounds. |
 | `system-field-types` does not list rating/survey-style fields | The required add-on is not active on this site | Call `system-info` to check active add-ons; fall back to core fields (`radio`, `select`, `checkbox`) when add-on types are unavailable |
 | `entries-update` with only status/metadata | Older bridge versions could wipe omitted field values | Safest pattern is still fetch → merge → update when changing existing entries |
