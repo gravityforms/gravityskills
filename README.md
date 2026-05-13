@@ -57,7 +57,7 @@ Skills must follow the [Agent Skills spec](https://agentskills.io/):
 Run validation before submitting:
 
 ```bash
-pnpm skills:validate
+./scripts/validate-skills.sh
 ```
 
 ## License
