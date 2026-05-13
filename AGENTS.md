@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Public skills repository for Gravity products. Pure content repo — no build tooling or package manager required. Skills are distributed via GitHub Releases (zips) and Claude Code plugin marketplace. The `@gravity/skills` CLI lives in `gravitysuite`.
+Public skills repository for Gravity products. Pure content repo — no build tooling or package manager required. Skills are distributed via GitHub Releases (zips). The `@gravity/skills` CLI lives in the Gravity Monorepo.
 
 ## Critical Warnings
 
@@ -29,7 +29,6 @@ Public skills repository for Gravity products. Pure content repo — no build to
 | Channel | Workflow | Trigger |
 |---------|----------|---------|
 | GitHub Releases (zips) | `.github/workflows/release.yml` | `v*` tag push |
-| Claude Code plugin | `.claude-plugin/marketplace.json` | Automatic from repo structure |
 
 ## Skills Directory Structure
 

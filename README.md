@@ -16,10 +16,6 @@ npx @gravity/skills install <skill-name>
 
 Download skill zips directly from [Releases](https://github.com/gravityforms/gravityskills/releases) and extract into your project's `.agents/skills/` directory.
 
-### Claude Code Plugin
-
-Skills are also available through the Claude Code plugin marketplace. See `.claude-plugin/marketplace.json` for the plugin manifest.
-
 ## Available Skills
 
 _Coming soon._ This repository is being set up to host public skills for Gravity products.
