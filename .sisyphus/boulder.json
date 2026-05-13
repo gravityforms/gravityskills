@@ -3,7 +3,9 @@
   "started_at": "2026-05-13T13:05:31.787Z",
   "session_ids": [
     "ses_1deaab1ceffezTzEEWrUlWMQbr",
-    "ses_1de8e267affePUc0rgTpYoD5dH"
+    "ses_1de8e267affePUc0rgTpYoD5dH",
+    "ses_1de85de77ffeX8NI6g4Y61hj2w",
+    "ses_1de8615a0ffeN54729IBEdtQwG"
   ],
   "plan_name": "skills-repo-framework",
   "agent": "atlas",
@@ -12,9 +14,10 @@
       "task_key": "todo:1",
       "task_label": "1",
       "task_title": "Runtime + pnpm Workspace Foundation",
-      "session_id": "ses_1de8e267affePUc0rgTpYoD5dH",
-      "agent": "build",
-      "updated_at": "2026-05-13T13:07:26.733Z"
+      "session_id": "ses_1de8615a0ffeN54729IBEdtQwG",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-05-13T13:18:56.475Z"
     }
   }
 }

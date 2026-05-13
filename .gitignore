@@ -1,8 +1,8 @@
-.svn/
-.agents/
-.specs/
+/.svn/
+/.agents/
+/.specs/
 tmp/
-.idea/
+/.idea/
 codeception.yml
 composer.json
 composer.lock
@@ -12,3 +12,5 @@ composer.lock
 /node_modules
 **/node_modules
 local-config.json
+dist/
+.sisyphus/
