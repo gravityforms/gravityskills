@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - 'v[0-9]*'
 
 permissions:
   contents: write
@@ -19,6 +19,12 @@ jobs:
 
       - name: Pack skills
         run: ./scripts/pack-skills.sh
+
+      - name: Verify zip integrity
+        run: |
+          for zip in dist/skills/*.zip; do
+            unzip -t "$zip"
+          done
 
       - name: Create GitHub Release
         env:

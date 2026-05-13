@@ -42,27 +42,29 @@ for skill_dir in "$SKILLS_DIR"/*/; do
 	fi
 
 	# Extract frontmatter (between first and second ---)
-	frontmatter=$(echo "$content" | sed -n '2,/^---$/{ /^---$/d; p; }')
-
-	if [[ -z "$frontmatter" ]]; then
+	# First verify closing delimiter exists
+	closing_line=$(echo "$content" | tail -n +2 | grep -n '^---$' | head -1 | cut -d: -f1 || true)
+	if [[ -z "$closing_line" ]]; then
 		errors+=("$skill_file: missing YAML frontmatter closing delimiter")
 		continue
 	fi
 
+	frontmatter=$(echo "$content" | sed -n "2,$((closing_line))p" | sed '$d')
+
 	# Extract name (handles quoted and unquoted values)
 	name=$(echo "$frontmatter" | grep -E '^name:' | head -1 | sed 's/^name:[[:space:]]*//' | sed 's/^["'\'']\(.*\)["'\'']/\1/')
 
-	# Extract description
+	# Extract description (single-line values only; multi-line YAML scalars are not supported)
 	description=$(echo "$frontmatter" | grep -E '^description:' | head -1 | sed 's/^description:[[:space:]]*//' | sed 's/^["'\'']\(.*\)["'\'']/\1/')
 
 	# Validate name
 	if [[ -z "$name" ]]; then
 		errors+=("$skill_file: frontmatter.name is required")
 	else
-		if ! echo "$name" | grep -qE '^[a-z]([a-z-]{0,62}[a-z])?$'; then
-			errors+=("$skill_file: frontmatter.name must be lowercase hyphenated text, 1-64 chars, with no leading/trailing/consecutive hyphens")
+		if ! echo "$name" | grep -qE '^[a-z0-9]([a-z0-9-]{0,62}[a-z0-9])?$'; then
+			errors+=("$skill_file: frontmatter.name must be lowercase alphanumeric and hyphens, 1-64 chars, no leading/trailing/consecutive hyphens")
 		elif echo "$name" | grep -q '\-\-'; then
-			errors+=("$skill_file: frontmatter.name must be lowercase hyphenated text, 1-64 chars, with no leading/trailing/consecutive hyphens")
+			errors+=("$skill_file: frontmatter.name must not contain consecutive hyphens")
 		fi
 
 		if [[ "$name" != "$dir_name" ]]; then

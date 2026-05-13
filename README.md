@@ -6,7 +6,9 @@ Skills follow the [Agent Skills](https://agentskills.io/) format.
 
 ## Installation
 
-### CLI
+### CLI (coming soon)
+
+> The `@gravity/skills` CLI is not yet published. Once available:
 
 ```bash
 npx @gravity/skills install <skill-name>

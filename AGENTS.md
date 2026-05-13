@@ -8,7 +8,6 @@ Public skills repository for Gravity products. Pure content repo — no build to
 
 - **`dist/` is GENERATED** — never edit or commit. Built by `scripts/pack-skills.sh`.
 - **`.agents/`, `.specs/`, `.sisyphus/` are PRIVATE** — gitignored, never commit. These contain local-only skills, specs, and plans.
-- **All commits on feature branches must reference `(#7488)`** in the message.
 
 ## Commands
 
@@ -43,4 +42,4 @@ Skills live in `skills/` and must follow the Agent Skills spec:
 
 Use conventional-style prefixes: `feat`, `fix`, `chore`, `docs`, `test`, `refactor`
 
-Format: `<type>: <subject> (#7488)` — present tense, imperative mood, no period.
+Format: `<type>: <subject>` — present tense, imperative mood, no period.

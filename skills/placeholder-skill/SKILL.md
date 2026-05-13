@@ -13,10 +13,9 @@ metadata:
 > **This is a test skill.** It exists to validate the Gravity Skills repository framework and distribution pipeline. It does not provide any real functionality.
 
 This skill is used to verify:
-- Skill validation (`pnpm skills:validate`) correctly parses SKILL.md frontmatter
-- Zip packaging (`pnpm skills:pack`) correctly bundles skill directories
+- Skill validation (`./scripts/validate-skills.sh`) correctly parses SKILL.md frontmatter
+- Zip packaging (`./scripts/pack-skills.sh`) correctly bundles skill directories
 - GitHub Releases distribution works end-to-end
-- Claude Code plugin marketplace installation works
 
 ## When to use
 

@@ -28,13 +28,15 @@ for skill_dir in "$SKILLS_DIR"/*/; do
 		-x "**/.DS_Store" \
 		-x "**/.env" \
 		-x "**/__pycache__/*" \
-		-x "**.tgz")
+		-x "*.tgz" \
+		-x "**/*.tgz")
 
 	size=$(wc -c < "$zip_path" | tr -d ' ')
 	if [[ $size -lt 1024 ]]; then
 		echo "Created $zip_path ($size B)"
 	else
-		kb=$(echo "scale=1; $size / 1024" | bc)
-		echo "Created $zip_path ($kb KB)"
+		kb=$((size / 1024))
+		remainder=$(( (size % 1024) * 10 / 1024 ))
+		echo "Created $zip_path ($kb.$remainder KB)"
 	fi
 done
