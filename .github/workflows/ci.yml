@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate skills
+        run: ./scripts/validate-skills.sh
+
+      - name: Pack skills
+        run: ./scripts/pack-skills.sh
+
+      - name: Verify zip integrity
+        run: |
+          for zip in dist/skills/*.zip; do
+            echo "Verifying $zip"
+            unzip -t "$zip"
+          done

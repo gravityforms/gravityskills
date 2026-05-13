@@ -1,0 +1,36 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate skills
+        run: ./scripts/validate-skills.sh
+
+      - name: Pack skills
+        run: ./scripts/pack-skills.sh
+
+      - name: Verify zip integrity
+        run: |
+          for zip in dist/skills/*.zip; do
+            unzip -t "$zip"
+          done
+
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            dist/skills/*.zip \
+            --title "${{ github.ref_name }}" \
+            --generate-notes
