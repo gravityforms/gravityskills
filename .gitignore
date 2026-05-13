@@ -1,0 +1,14 @@
+.svn/
+.agents/
+.specs/
+tmp/
+.idea/
+codeception.yml
+composer.json
+composer.lock
+/vendor
+.DS_Store
+.env
+/node_modules
+**/node_modules
+local-config.json
