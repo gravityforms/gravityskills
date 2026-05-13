@@ -1,6 +1,3 @@
-packages:
-  - "packages/*"
-
 # Supply chain hardening (pnpm 11)
 # https://pnpm.io/supply-chain-security
 minimumReleaseAge: 10080 # 7 days — raised from 1d due to Mini Shai-Hulud supply chain attack (May 2026)

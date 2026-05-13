@@ -7,8 +7,7 @@
     "npm": "11.6.2"
   },
   "scripts": {
-    "build": "pnpm -r build",
-    "test": "pnpm -r test",
+    "test": "bun test",
     "skills:validate": "node --import tsx/esm scripts/validate-skills.ts",
     "skills:pack": "node --import tsx/esm scripts/pack-skills.ts"
   },
