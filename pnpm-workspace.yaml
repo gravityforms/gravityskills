@@ -3,7 +3,7 @@ packages:
 
 # Supply chain hardening (pnpm 11)
 # https://pnpm.io/supply-chain-security
-minimumReleaseAge: 1440 # 1 day — newly published packages not resolved for 24h
+minimumReleaseAge: 10080 # 7 days — raised from 1d due to Mini Shai-Hulud supply chain attack (May 2026)
 blockExoticSubdeps: true # Block git/tarball transitive dependencies
 trustPolicy: no-downgrade # Reject packages with reduced trust level vs prior releases
 verifyDepsBeforeRun: install # Verify lockfile integrity before any pnpm run
