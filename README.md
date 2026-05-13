@@ -6,12 +6,18 @@ Skills follow the [Agent Skills](https://agentskills.io/) format.
 
 ## Installation
 
-### CLI (coming soon)
+### Skills CLI
 
-> The `@gravity/skills` CLI is not yet published. Once available:
+> Until the `@gravity/skills` CLI is published, use the [Vercel Skills CLI](https://github.com/vercel-labs/skills):
 
 ```bash
-npx @gravity/skills install <skill-name>
+npx skills add gravityforms/gravityskills
+```
+
+Install a specific skill:
+
+```bash
+npx skills add gravityforms/gravityskills --skill gravity-forms-abilities
 ```
 
 ### GitHub Releases
@@ -25,6 +31,10 @@ Download skill zips directly from [Releases](https://github.com/gravityforms/gra
 Workflow guidance for AI agents using Gravity Forms abilities via the WordPress Abilities API (MCP). Covers form CRUD, entry management, submissions, feeds, notifications, conditional logic, and system queries. Provides critical sequencing rules, field configuration knowledge, and pitfall avoidance that tool schemas alone cannot express.
 
 **Requires:** WordPress site with Gravity Forms 2.9+ and MCP endpoint enabled (GF Settings → MCP).
+
+```bash
+npx skills add gravityforms/gravityskills --skill gravity-forms-abilities
+```
 
 ## Usage
 
