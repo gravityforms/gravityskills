@@ -20,7 +20,11 @@ Download skill zips directly from [Releases](https://github.com/gravityforms/gra
 
 ## Available Skills
 
-_Coming soon._ This repository is being set up to host public skills for Gravity products.
+### [`gravity-forms-abilities`](skills/gravity-forms-abilities/)
+
+Workflow guidance for AI agents using Gravity Forms abilities via the WordPress Abilities API (MCP). Covers form CRUD, entry management, submissions, feeds, notifications, conditional logic, and system queries. Provides critical sequencing rules, field configuration knowledge, and pitfall avoidance that tool schemas alone cannot express.
+
+**Requires:** WordPress site with Gravity Forms 2.9+ and MCP endpoint enabled (GF Settings → MCP).
 
 ## Usage
 
