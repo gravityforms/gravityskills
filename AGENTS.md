@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Public skills repository for Gravity products. Pure content repo — no build tooling or package manager required. Skills are distributed via GitHub Releases (zips). The `@gravity/skills` CLI lives in the Gravity Monorepo.
+Public skills repository for Gravity products. Pure content repo — no build tooling or package manager required. Skills are distributed via the [Vercel Skills CLI](https://github.com/vercel-labs/skills) (`npx skills add gravityforms/gravityskills`) and via GitHub Releases (zips).
 
 ## Critical Warnings
 
@@ -28,6 +28,18 @@ Public skills repository for Gravity products. Pure content repo — no build to
 | Channel | Workflow | Trigger |
 |---------|----------|---------|
 | GitHub Releases (zips) | `.github/workflows/release.yml` | `v*` tag push |
+
+**Tag only after merge to `main`.** The release workflow fires on `v*` tag push: it packs the skill zips, extracts the matching `change_log.txt` section via `scripts/release-notes.sh`, and creates the GitHub Release with that section as the notes. Never tag from a feature branch.
+
+## Changelog
+
+Record user-facing changes in `change_log.txt` (Gravity Forms core format). Add entries to the top version section in the same PR as the change — there is no fragment tooling.
+
+- Header: `### <version> | <date>` (e.g. `### 1.0.2 | 2026-06-18`), newest version on top.
+- One change per `- ` bullet, prefixed with the skill name it applies to (e.g. `gravity-forms-abilities: ...`); use `Repository:` for repo-wide changes.
+- After the prefix, write in **present tense** ending in a period (e.g. `Add ...`, `Fix ...`, `Remove ...`, `Update ...`).
+- Alpha-sort the full bullet lines within a version. This groups them by skill (prefix sorts first), then by verb.
+- Skip internal-only changes (refactors, tests, CI, docs).
 
 ## Skills Directory Structure
 

@@ -34,18 +34,18 @@ All ability names use format `gravityforms/{category}-{action}`.
 
 ## Access Modes
 
-The MCP settings page (GF Settings → MCP) controls two toggles:
+The MCP settings page (GF Settings → MCP) gates access with a master switch plus a per-tool allowlist:
 
-1. **Enable MCP** (default: off) — Gates all ability registration. When off, no `gravityforms/*` abilities appear.
-2. **Write Access** (default: off) — When off, only read-only abilities are registered (12 of 25). Write abilities (create, update, delete, submit, send, add) are filtered out at registration time.
+1. **Enable MCP** (default: off) — Master switch. When off, no `gravityforms/*` ability is exposed or callable, regardless of the per-tool checkboxes.
+2. **Per-tool checkboxes** (default: every tool off) — When MCP is on, each ability is individually enabled or disabled via a checkbox, grouped into **Read-only Tools** and **Write & Destructive Tools** (each with a select/deselect-all control). A tool is exposed and callable only when its box is checked. **There is no blanket "read access" — read-only tools are off by default too** and must be enabled individually.
 
-**Read-only abilities** (always available when MCP is enabled):
-`forms-get`, `forms-list`, `forms-analyze-logic`, `entries-get`, `entries-search`, `entries-count`, `submissions-validate`, `feeds-list`, `notifications-list`, `notes-list`, `system-info`, `system-field-types`
+So an ability is available only when **Enable MCP is on AND that specific tool is checked**. A freshly enabled integration exposes nothing until tools are opted in.
 
-**Write abilities** (require Write Access toggle):
-`forms-create`, `forms-update`, `forms-delete`, `forms-duplicate`, `entries-create`, `entries-update`, `entries-delete`, `feeds-create`, `feeds-update`, `feeds-delete`, `submissions-submit`, `notifications-send`, `notes-add`
+**Read-only group** (each opt-in): `forms-get`, `forms-list`, `forms-analyze-logic`, `entries-get`, `entries-search`, `entries-count`, `submissions-validate`, `feeds-list`, `notifications-list`, `notes-list`, `system-info`, `system-field-types`
 
-If a write ability is not available, the site admin has not enabled write access. Do not attempt workarounds — inform the user that write access must be enabled in GF Settings → MCP.
+**Write & destructive group** (each opt-in): `forms-create`, `forms-update`, `forms-delete`, `forms-duplicate`, `entries-create`, `entries-update`, `entries-delete`, `feeds-create`, `feeds-update`, `feeds-delete`, `submissions-submit`, `notifications-send`, `notes-add`
+
+If an ability is not available (absent from discovery, or a direct call is permission-denied), the admin has not enabled that specific tool (or MCP itself is off). Do not attempt workarounds — tell the user to enable the exact tool, and Enable MCP, in GF Settings → MCP.
 
 ### Endpoint Modes
 
@@ -218,7 +218,9 @@ See [references/entry-operations.md](references/entry-operations.md) for filter 
 
 ### Bulk Deleting Entries
 
-`entries-delete` supports bulk mode — pass `form_id` instead of `entry_id` to delete all matching entries server-side in one call.
+`entries-delete` supports bulk mode — pass `form_id` instead of `entry_id` to delete all matching entries server-side.
+
+**Bulk calls are capped at 100 entries per call** (to avoid server timeouts). The response includes `remaining` and `capped`. When `capped: true`, loop: call `entries-count` for the updated count, then `entries-delete` again (force mode needs a fresh `DELETE {count} ENTRIES FROM FORM {form_id}` confirmation each time). Repeat until `remaining` is 0. Already-trashed entries are excluded from trash-mode bulk deletes automatically, so each call processes new entries.
 
 **Delete all entries from every form** (e.g., pre-launch cleanup):
 1. Call `forms-list` — get all form IDs
@@ -320,6 +322,7 @@ For CL structure details, operators, and common patterns, see [references/condit
 | Using `@example.com` emails in submissions | Rejected as spam by GF email field | Use realistic test domains (e.g., `@testmail.dev`) |
 | Passing `form_id` as top-level param on `forms-update` | Input validation error | Put form ID inside the `form` object as `id` |
 | Using integer `fieldId` in CL rules | Logic may not evaluate correctly | Always use string: `"fieldId": "1"` not `"fieldId": 1` |
+| Using deprecated Ready Classes (`gf_left_half`, `gf_right_half`, `gf_left_third`, `gf_inline`, etc.) in `cssClass` | Deprecated since GF 2.5 — the API strips them and reports `stripped_ready_classes` in the response | NEVER use Ready Classes for layout. Use `layoutGroupId` + `layoutGridColumnSpan` — see Layout Grid in field-config reference |
 | Parsing raw CL from `forms-get` manually | Error-prone, misses notifications/confirmations/buttons | Use `forms-analyze-logic` instead |
 | Using `is_active: '0'` to pause a form | Form disappears entirely — page shows nothing | Use `scheduleForm` + `scheduleEnd` instead |
 | Fileupload field without `allowedExtensions`/`maxFileSize` | Accepts any file type/size — security risk | Always set `allowedExtensions` and `maxFileSize` — see field-config reference |
@@ -327,7 +330,7 @@ For CL structure details, operators, and common patterns, see [references/condit
 | Creating a name field without `nameFormat: "advanced"` | First/Last sub-inputs render stacked vertically instead of side-by-side | Always set `"nameFormat": "advanced"` and `"size": "large"` on name fields — see field-config reference |
 | Passing multiselect values as comma-separated string | Data loss when values contain commas (e.g., "Atlanta, GA") | Always pass multiselect values as an **array**: `"input_1": ["Red", "Blue"]` — see field-config reference |
 | User asks to "create a form and add it to a page" | Cannot create WordPress pages/posts — only GF abilities exist | Create the form, then tell the user the shortcode `[gravityform id="X" title="true"]` to embed manually. Page/post creation is not currently available via the Abilities API. |
-| Write ability not found (e.g., `forms-create`) | Site admin has not enabled Write Access in MCP settings | Inform the user that write access must be enabled in GF Settings → MCP before write operations are available. Do not attempt workarounds. |
+| Ability not found (e.g., `forms-create`) | Site admin has not checked that specific tool (or Enable MCP is off) in MCP settings | Tell the user to enable the exact tool — and Enable MCP — in GF Settings → MCP. There is no blanket "write access" toggle; each tool is opted in individually. Do not attempt workarounds. |
 | `system-field-types` does not list rating/survey-style fields | The required add-on is not active on this site | Call `system-info` to check active add-ons; fall back to core fields (`radio`, `select`, `checkbox`) when add-on types are unavailable |
 | `entries-update` with only status/metadata | Older bridge versions could wipe omitted field values | Safest pattern is still fetch → merge → update when changing existing entries |
 | `entries-create` date field given in the wrong format | Searches may miss the entry later | Prefer the form's configured date format; ISO is only safe if the bridge explicitly normalizes it |
@@ -346,6 +349,8 @@ For CL structure details, operators, and common patterns, see [references/condit
 **Layout fields** (no data): `html`, `section`, `page` — visual only, do not collect submissions.
 
 **Layout grid**: Control field width and row grouping with `layoutGridColumnSpan` (1–12, default full width) and `layoutGroupId` (any string — fields sharing the same value render on the same row). See [references/field-config.md](references/field-config.md) §Layout Grid for patterns and natural language mapping.
+
+**Pricing fields**: `product`, `option`, `quantity`, `shipping`, `total`. Product variants (single product, dropdown, calculation, hidden, user-defined price) are set via `inputType` on a `product` field — never as standalone types (`singleproduct`, `calculation`, etc. are not valid `type` values and are excluded from `system-field-types`). Choice-based products submit `value|price` (e.g. `"input_2": "Pro|30"` for a $30.00 choice). See [references/field-config.md](references/field-config.md) §Pricing Fields for the full pattern table and submission formats.
 
 **Type-specific properties**: Several field types accept configuration beyond what `system-field-types` reports — `number` (rangeMin/rangeMax/numberFormat), `date` (dateFormat/dateType), `phone` (phoneFormat), `text`/`textarea` (maxLength), `fileupload` (allowedExtensions/maxFileSize/maxFiles), `consent` (checkboxLabel/description). See [references/field-config.md](references/field-config.md) for the full reference.
 

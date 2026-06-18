@@ -93,6 +93,30 @@ Choice field types: `select`, `radio`, `checkbox`, `multiselect`, `image_choice`
 
 Note: Always call `system-field-types` for the authoritative, up-to-date list — add-ons may register additional types.
 
+## Pricing Fields (`product`, `option`, `quantity`, `shipping`, `total`)
+
+Pricing variants are NOT standalone field types. `system-field-types` intentionally omits `singleproduct`, `hiddenproduct`, `calculation`, `price`, `donation`, and `singleshipping` — those are **`inputType` values on a `product` (or `shipping`) field**, matching the editor's "Field Type" dropdown. Never pass them as `type`.
+
+| What you want | Field config |
+|---|---|
+| Fixed-price product | `{ "type": "product", "label": "Widget", "inputType": "singleproduct", "basePrice": "$25.00" }` |
+| Product chosen from a list | `{ "type": "product", "inputType": "select", "choices": [{ "text": "Pro", "value": "Pro", "price": "$30.00" }] }` (also `radio`) |
+| User-defined price | `{ "type": "product", "inputType": "price" }` |
+| Hidden product | `{ "type": "product", "inputType": "hiddenproduct", "basePrice": "$9.00" }` |
+| Calculated price | `{ "type": "product", "inputType": "calculation", "calculationFormula": "{Qty:3} * 2" }` |
+| Quantity for a product | `{ "type": "quantity", "label": "Qty", "productField": 1 }` (`productField` = the product field's ID) |
+| Flat shipping | `{ "type": "shipping", "inputType": "singleshipping", "basePrice": "$5.00" }` |
+| Shipping options | `{ "type": "shipping", "inputType": "select", "choices": [{ "text": "Ground", "value": "Ground", "price": "$5.00" }] }` |
+| Order total | `{ "type": "total", "label": "Total" }` |
+
+The API applies the same defaults the editor would: bare `type: product` becomes `inputType: singleproduct`; single/hidden/calculation products get their `.1` (name) / `.2` (price) / `.3` (quantity) sub-inputs created automatically; choice-based product and shipping fields get `enablePrice` set (required — without it, priced submissions fail GF's anti-tampering state validation).
+
+**Submitting pricing fields:**
+
+- Single product: `"input_1.1": "Widget"`, `"input_1.2": "$25.00"`, and `"input_1.3": "2"` for quantity (or use a separate quantity field: `"input_3": "2"`).
+- Choice-based product/shipping: submit `value|price` with the price as a plain number matching the choice — e.g. `"input_2": "Pro|30"` for a `$30.00` choice. The wrong price (or omitting `|price`) fails validation as a tampered submission.
+- Total fields are computed server-side — never submit a value for them.
+
 ## Type-Specific Configuration
 
 `system-field-types` returns generic capability flags but does **not** expose type-specific properties. The following properties are accepted by `forms-create` and `forms-update` — pass them directly on the field object.
@@ -295,6 +319,8 @@ The `is` operator does not work for individual multiselect values — it matches
 ## Layout Grid
 
 Fields default to full-width (12 columns). To place fields side-by-side, give them the same `layoutGroupId` and set `layoutGridColumnSpan` to control width.
+
+**NEVER use Ready Classes.** Gravity Forms' legacy CSS helper classes (`gf_left_half`, `gf_right_half`, `gf_left_third`, `gf_middle_third`, `gf_right_third`, `gf_first_quarter`…`gf_fourth_quarter`, `gf_inline`, `gf_list_*`) are deprecated since GF 2.5 and do nothing in modern themes. The abilities API strips them from `cssClass` automatically and returns a `stripped_ready_classes` list plus a `notice` when it does. The layout grid is the only supported way to control field layout.
 
 ### Properties
 
