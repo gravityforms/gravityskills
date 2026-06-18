@@ -50,7 +50,7 @@ fi
 
 notes="$(extract "$1" "$CHANGELOG")"
 if [[ -z "$notes" ]]; then
-	echo "Error: no change_log.txt section found for version ${1#v}" >&2
+	echo "Error: no $CHANGELOG section found for version ${1#v}" >&2
 	exit 1
 fi
 printf '%s\n' "$notes"
