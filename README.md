@@ -8,7 +8,7 @@ Skills follow the [Agent Skills](https://agentskills.io/) format.
 
 ### Skills CLI
 
-> Until the `@gravity/skills` CLI is published, use the [Vercel Skills CLI](https://github.com/vercel-labs/skills):
+Install all skills with the [Vercel Skills CLI](https://github.com/vercel-labs/skills):
 
 ```bash
 npx skills add gravityforms/gravityskills

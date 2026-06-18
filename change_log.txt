@@ -1,0 +1,11 @@
+### 1.0.2 | 2026-06-18
+- gravity-forms-abilities: Add a warning against deprecated Ready Classes in favor of the layout grid.
+- gravity-forms-abilities: Add documentation for the 100-entry bulk-delete cap and the count/delete loop.
+- gravity-forms-abilities: Add pricing field guidance covering product, option, quantity, shipping, and total inputTypes and submission formats.
+- gravity-forms-abilities: Update the access model to the per-tool allowlist (Enable MCP plus individual tool checkboxes), replacing the read/write toggles.
+
+### 1.0.1 | 2026-05-13
+- gravity-forms-abilities: Add the skill — workflow guidance for Gravity Forms abilities via the WordPress Abilities API (MCP).
+
+### 1.0.0 | 2026-05-13
+- Repository: Add the public Gravity Skills repository framework.

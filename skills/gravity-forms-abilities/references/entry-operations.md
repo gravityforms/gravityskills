@@ -125,7 +125,7 @@ For large result sets:
 
 ## Bulk Entry Deletion
 
-`entries-delete` supports bulk mode — pass `form_id` instead of `entry_id` to delete all entries for a form in a single call.
+`entries-delete` supports bulk mode — pass `form_id` instead of `entry_id` to delete all entries for a form server-side.
 
 ### Delete all entries for one form
 
@@ -135,7 +135,16 @@ For large result sets:
 }
 ```
 
-Returns: `{ "success": true, "deleted_count": 47 }`
+Returns: `{ "success": true, "deleted_count": 47, "trashed": true, "remaining": 0, "capped": false, "cap": 100 }`
+
+### Per-call cap (100 entries)
+
+Bulk calls process at most 100 entries per call to avoid server timeouts. When more entries match:
+
+- `capped: true` and `remaining > 0` are returned
+- Loop: call `entries-count` for the updated count, then `entries-delete` again, until `remaining` is 0
+- **Force mode**: each loop iteration needs a fresh confirmation phrase built from the updated count (`DELETE {count} ENTRIES FROM FORM {form_id}`)
+- **Trash mode**: already-trashed entries are excluded automatically, so each call picks up where the last one left off; filtering on `status: "trash"` with trash mode is a no-op (`deleted_count: 0`)
 
 ### Delete with filter (e.g., only entries before a date)
 

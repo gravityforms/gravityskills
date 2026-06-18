@@ -26,6 +26,9 @@ jobs:
             unzip -t "$zip"
           done
 
+      - name: Build release notes
+        run: ./scripts/release-notes.sh "${{ github.ref_name }}" > release-notes.md
+
       - name: Create GitHub Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -33,4 +36,4 @@ jobs:
           gh release create "${{ github.ref_name }}" \
             dist/skills/*.zip \
             --title "${{ github.ref_name }}" \
-            --generate-notes
+            --notes-file release-notes.md
