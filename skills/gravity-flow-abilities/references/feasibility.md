@@ -14,7 +14,7 @@ Customers often ask whether a workflow design is possible before building. These
 
 ## Integrations (verify the add-on is installed before promising)
 
-- **Payment-then-review** (e.g. paid application → manual approval): payment via a GF payment add-on (e.g. Stripe) on submission, then Flow approval steps. "Non-refundable payment, then review" = payment collected at submission, approval gates only the post-payment outcome.
+- **Payment-then-review** (e.g. paid application → manual approval): two verified patterns — payment at submission via a GF payment add-on feed, or a mid-workflow `stripe_checkout` step (Flow Stripe extension) where the assignee pays through Stripe-hosted Checkout from their workflow detail page. Payment itself always happens on Stripe's hosted page — never through MCP; agents triage/diagnose payment steps and verify outcomes (payment_status, transaction id, timeline "Processed" event). Capture/refund/cancel steps automate post-payment actions.
 - **Role change / user registration on approval**: GF User Registration add-on feeds run as workflow steps — approve → the registration/role-update feed step fires. Rejection routes around it.
 - **Signatures**: the GF Signature add-on's field works inside workflows; approval steps can display and collect signature fields (signature on approval requires the field on the form and step display/editable config).
 - **PDF generation**: Gravity Flow PDF add-on generates PDFs from entries with merge tags (including signatures) as a workflow step.
