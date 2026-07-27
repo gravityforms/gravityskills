@@ -63,7 +63,8 @@ After processing, trust this response over assumptions — reject destinations a
 |---|---|---|
 | `operation_not_supported` | Current step type is not processable | Use the unstick ladder (steps-restart / send-to-step), not repeated processing |
 | `assignee_already_processed` | This assignee already acted on this step | Done — do not retry; check `workflow-status-get` for current state |
-| Validation error naming a required note | Step config requires a note for this status | Retry the same call with `note` |
-| Error naming editable field IDs | `field_values` touched a non-editable field | Resend with only listed fields; report the rest to the user |
-| Permission error | Not a pending assignee (self) / missing admin permission (delegated) | Check `workflow-status-get` assignees; do not escalate on your own |
+| `gravityflow_ability_validation_failed` | Names each concrete failure (e.g. "note: A note is required") | Retry the same call with the missing/corrected values |
+| `gravityflow_ability_field_not_editable` | `field_values` touched a non-editable field; error names the editable IDs | Resend with only listed fields; report the rest to the user |
+| `gravityflow_ability_not_pending_assignee` | You are not a pending assignee on the current step | Check `workflow-status-get` assignees; do not escalate on your own |
+| `gravityflow_ability_delegation_denied` / `gravityflow_ability_note_required` | Delegation needs workflow-admin permission and a reason note | Add the note; if permission is missing, hand back to the user |
 | Entry not found | Entry nonexistent OR not visible to this user | Indistinguishable by design — verify via `status-search`, don't enumerate |

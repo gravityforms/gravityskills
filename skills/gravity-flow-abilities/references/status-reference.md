@@ -23,6 +23,7 @@ A rejected approval does not necessarily end the workflow — reject destination
 | `complete` | Step finished (user input completed, notification sent, feed processed…) |
 | `approved` / `rejected` | Approval step outcome |
 | `revert` | Approval reverted to a user-input step for changes |
+| `cancelled` | Step was skipped (workflow-send-to-step) or the workflow was cancelled while it was active |
 
 ## Per-assignee statuses
 

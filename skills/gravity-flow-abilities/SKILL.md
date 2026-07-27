@@ -87,6 +87,8 @@ Sort/prioritize by `workflow_timestamp` (when the task started waiting), not `da
 
 1. `workflow-status-get { entry_id }` → current step, how long pending, live assignees and who hasn't acted
 2. `timeline-get { entry_id }` → what already happened, in whose hands it stalled
+**Where admins get step IDs:** `steps-list` requires the step-builder permission, which workflow admins often lack. The per-step map in `workflow-status-get` (`steps[] { id, name, type, status }`) is the intended step-ID source for send-to-step targets. Skipped steps show status `cancelled` there.
+
 3. Escalate mildest-first (all admin-gated):
    - `steps-restart` — reset the current step's assignee statuses and re-send notifications. Use when the assignee missed/lost the notification.
    - `workflow-send-to-step { step_id }` — jump to a specific step; the current step's pending assignees are discarded. Use to skip a broken/unnecessary step.
@@ -114,7 +116,7 @@ This is the ONE sanctioned exception to "don't edit workflow fields mid-step," a
 
 ### Analytics
 
-- `reports-get { scope }` — scopes and required params: `all_forms` (per-form), `form` (per-month, needs `form_id`), `form_by_step` (needs `form_id`), `step_by_assignee` (needs `step_id`), `form_by_assignee` (needs `form_id`), `all_forms_by_assignee`, `assignee_by_month` (needs `assignee_key`). Defaults to the last 6 months; durations are **seconds** — convert to human units when reporting.
+- `reports-get { scope }` — scopes and required params: `all_forms` (per-form), `form` (per-month, needs `form_id`), `form_by_step` (needs `form_id`), `step_by_assignee` (needs `step_id`), `form_by_assignee` (needs `form_id`), `all_forms_by_assignee`, `assignee_by_month` (needs `assignee_key`). Defaults to the last 6 months. Rows carry `count` and `avg_duration_secs` plus scope-specific identifiers; durations are **seconds** — convert to human units when reporting.
 - `activity-list` — newest-first event feed (workflow/step/assignee lifecycle), filter by `objects`, `form_id`, `limit` (default 50, max 400). Use for "who approved what today." Delegated actions appear as assignee `delegated` events where `display_name` is the acting admin and `assignee_key` is who they acted for.
 - Pattern: `reports-get` finds the aggregate problem (slowest approver), `status-search` finds the concrete backlog behind it.
 
