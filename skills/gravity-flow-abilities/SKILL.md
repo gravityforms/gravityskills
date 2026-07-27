@@ -12,7 +12,7 @@ metadata:
 
 ## Ability Routing
 
-17 abilities. Select based on intent:
+21 abilities. Select based on intent:
 
 **Orient** → `system-info` (Flow version + workflow-enabled forms with step counts and pending-entry counts — call this first), `system-step-types` (registered step types with `processable` flags)
 
@@ -28,11 +28,13 @@ metadata:
 
 **Step configuration (read)** → `steps-list` (a form's steps, summary shape; optional `entry_id` adds per-entry statuses), `steps-get` (one step's sanitized settings)
 
+**Build (write)** → `system-step-type-schema` (settings schema for one type — call FIRST), `steps-create`, `steps-update` (partial merge), `steps-delete`
+
 **Analyze** → `reports-get` (aggregate completion counts and durations across 7 scopes), `activity-list` (recent workflow event feed — the audit view)
 
 All ability names use format `gravityflow/{area}-{action}`. On the dedicated endpoint, tool names are hyphenated: `gravityflow-inbox-list`.
 
-**Not yet available:** step configuration writes (`steps-create`, `steps-update`, `steps-delete`, `system-step-type-schema`) are planned but not shipped. Never attempt to create or modify workflow steps via `gravityforms/feeds-*` — steps are Flow-owned feeds and generic feed tools bypass Flow's validation. Report the limitation instead.
+**Step writes are allowlisted:** only `approval`, `user_input`, and `notification` steps can be created or modified programmatically; other types (feed add-on steps, routing, etc.) return an error naming the allowlist — configure those in the Flow admin UI. `workflow_start` / `workflow_complete` are auto-managed sentinels and can never be touched. Never attempt to create or modify workflow steps via `gravityforms/feeds-*` — Flow actively refuses generic feed tools targeting its steps and redirects you to `gravityflow/steps-*`.
 
 ## Division of Labor: Flow vs Forms
 
@@ -114,6 +116,16 @@ There is no reassign ability. For steps whose assignees resolve from an entry fi
 
 This is the ONE sanctioned exception to "don't edit workflow fields mid-step," and it only works for field-resolved assignees. For steps with fixed user/role assignees, the step configuration itself must change — not yet possible via MCP; direct the user to the step settings screen.
 
+### Building workflow steps
+
+1. `system-step-type-schema { step_type, form_id }` — the settings vocabulary for the type. **Unknown settings keys are rejected on create/update (nothing saves), so never guess keys.**
+2. `steps-create { form_id, step_type, step_name, assignees, destination_complete, condition, settings }` — first-class inputs cover the common cases; everything else goes in `settings`. Assignees use `type|id` keys; the internal assignee-source discriminator is handled for you. New steps append to the end of the workflow. Conditions are GF conditional-logic objects (`{actionType, logicType, rules}`) gating whether the step runs.
+3. Verify with `steps-list` — check order and destinations.
+4. `steps-update { step_id, ... }` — partial merge; a step's type is immutable. **When entries are in flight on the step, the update is blocked until you echo `UPDATE STEP {id} AFFECTING {n} ENTRIES`** — and changing assignee settings reroutes ALL of those entries (assignees re-resolved and re-notified automatically). Confirm blast radius with the user first.
+5. `steps-delete { step_id, confirmation }` — always needs `DELETE STEP {id} FROM FORM {form_id}`; if entries sit on the step the error escalates to a count-bearing phrase (`DELETE STEP {id} AFFECTING {n} ENTRIES`). Prefer moving in-flight entries with `workflow-send-to-step` first. Deletes are blocked while other steps' destinations route to the step — update those destinations first (the error names them).
+
+Every validation error names the concrete problem (unknown keys, invalid assignee, bad destination, invalid enum value) — fix exactly what it names and retry.
+
 ### Analytics
 
 - `reports-get { scope }` — scopes and required params: `all_forms` (per-form), `form` (per-month, needs `form_id`), `form_by_step` (needs `form_id`), `step_by_assignee` (needs `step_id`), `form_by_assignee` (needs `form_id`), `all_forms_by_assignee`, `assignee_by_month` (needs `assignee_key`). Defaults to the last 6 months. Rows carry `count` and `avg_duration_secs` plus scope-specific identifiers; durations are **seconds** — convert to human units when reporting.
@@ -156,7 +168,10 @@ Full vocabulary, per-assignee meta, and the entries-search escape hatch: [refere
 | Sorting inbox by `date_created` | Oldest *submission* ≠ longest-*waiting* task | Sort by `workflow_timestamp` |
 | Treating `status-search`'s thin results as "no entries" | Degraded mode shows own submissions only | Report the missing view-all permission instead |
 | Tool absent from discovery | Admin hasn't enabled that tool (or MCP is off) | Point to Workflow → Settings → MCP; no workarounds |
-| Building/modifying steps via `gravityforms/feeds-*` | Bypasses Flow validation; refused | Step CRUD via MCP is not yet available — say so |
+| Building/modifying steps via `gravityforms/feeds-*` | Actively refused by Flow | Use `gravityflow/steps-create` / `steps-update` / `steps-delete` |
+| Guessing settings keys on steps-create/update | Unknown keys rejected, nothing saved | Call `system-step-type-schema` first |
+| Updating assignees on a step with in-flight entries without warning the user | Every in-flight entry is rerouted and re-notified | Echo the count-bearing confirmation only after the user confirms the blast radius |
+| Deleting a step other steps route to | Blocked — dangling destinations | Update the referencing steps' destinations first (the error names them) |
 
 For steps-process details and error codes: [references/processing.md](references/processing.md).
 For status vocabulary, meta keys, and search escape hatches: [references/status-reference.md](references/status-reference.md).
