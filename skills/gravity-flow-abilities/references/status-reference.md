@@ -61,7 +61,7 @@ Example — all entries stuck on step 41 in form 3:
 
 ```json
 {
-  "form_id": 3,
+  "form_ids": [3],
   "search_criteria": {
     "field_filters": [
       { "key": "workflow_step", "value": "41" }
@@ -70,11 +70,13 @@ Example — all entries stuck on step 41 in form 3:
 }
 ```
 
+Note: GF's `entries-search` takes `form_ids` (an array), not `form_id`.
+
 Example — everything user 7 has ever approved on form 3:
 
 ```json
 {
-  "form_id": 3,
+  "form_ids": [3],
   "search_criteria": {
     "field_filters": [
       { "key": "workflow_user_id_7", "value": "approved" }
