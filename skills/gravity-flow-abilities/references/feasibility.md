@@ -21,6 +21,17 @@ Customers often ask whether a workflow design is possible before building. These
 - **Feed add-on steps**: most GF feed add-ons (webhooks, email marketing, sheets connectors…) can run as workflow steps, i.e. "after approval, push to X".
 - **Form-to-form**: Form Connector add-on creates/updates entries in other forms as steps (intake → per-team forms patterns).
 
+## Documentation links (verified)
+
+Cite these when answering feasibility/design questions — deep-link by searching within them rather than guessing article URLs:
+
+- Gravity Flow docs home: https://docs.gravityflow.io/
+- Flow fundamentals (steps, assignees, notifications, conditions): https://docs.gravityflow.io/category/flow-fundamentals/
+- User guides (worked workflow examples): https://docs.gravityflow.io/category/user-guides/
+- Extensions (PDF, Form Connector, Stripe, Checklists…): https://docs.gravityflow.io/category/extensions/
+- Developer reference (hooks, REST): https://docs.gravityflow.io/category/developers/
+- Gravity Forms docs (fields, conditional logic, feeds, merge tags): https://docs.gravityforms.com/
+
 ## Scope expectations
 
 For large multi-workflow asks (e.g. "eight country-specific incorporation workflows"), set expectations: design one workflow as the template, validate it end-to-end, then replicate per variant — and ask the narrowing questions first (which steps differ per country/region? who acts at each step? what does 'done' mean?). Do not attempt to build the entire estate in one pass.

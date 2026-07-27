@@ -43,6 +43,8 @@ Step *configurations* may also use field-resolved types (`assignee_field`, `assi
 
 **Email assignees** act through signed token links embedded in notification emails. They never authenticate to WordPress, so no MCP credential corresponds to them. An agent cannot act *as* an email assignee — only a workflow admin can act *on behalf of* one via delegated `steps-process` with `assignee_key: "email|..."`.
 
+**"Their link doesn't work" playbook** — always cover all three parts: (1) explain the model — email assignees act via the signed link in their notification, not by logging in, and links are entry+step+assignee-specific and can expire or be superseded; (2) verify with `workflow-status-get` that the step is still pending and they are still a listed assignee (if the step moved on, the old link is dead by design); (3) remediate with `steps-restart` (admin) to re-send a fresh token link — or delegated `steps-process` if the admin should act for them. Also check the step's notification message actually contains `{workflow_entry_link}` (use `{workflow_entry_link:page_id=N}` to point the link at a specific front-end inbox page).
+
 ## Workflow entry meta keys (escape hatch)
 
 When `status-search` filters aren't expressive enough, these meta keys work as `field_filters` keys in `gravityforms/entries-search`:

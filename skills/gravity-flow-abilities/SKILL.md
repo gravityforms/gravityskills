@@ -59,7 +59,9 @@ Flow's MCP surface is gated in **Workflow → Settings → MCP**, independently 
 
 **Write & destructive group** (each opt-in): `timeline-note-add`, `steps-process`, `steps-restart`, `workflow-send-to-step`, `workflow-restart`, `workflow-cancel`
 
-If a tool is absent from discovery or a call is permission-denied, the admin has not enabled that specific tool (or MCP itself is off). Do not attempt workarounds — tell the user to enable the exact tool in Workflow → Settings → MCP.
+If a tool is absent from discovery or a call is permission-denied, the admin has not enabled that specific tool (or MCP itself is off), or your user lacks the capability. Do not attempt workarounds — tell the user to enable the exact tool in Workflow → Settings → MCP, or which capability is missing.
+
+**Admin-screen handoff URLs** (when a change needs the Flow admin UI, give the user a direct link): step settings live at `{site}/wp-admin/admin.php?page=gf_edit_forms&view=settings&subview=gravityflow&id={form_id}&fid={step_id}` — build these from `steps-list` output when recommending manual configuration.
 
 ### Endpoint
 
@@ -90,6 +92,8 @@ Sort/prioritize by `workflow_timestamp` (when the task started waiting), not `da
 1. `workflow-status-get { entry_id }` → current step, how long pending, live assignees and who hasn't acted
 2. `timeline-get { entry_id }` → what already happened, in whose hands it stalled
 **Where admins get step IDs:** `steps-list` requires the step-builder permission, which workflow admins often lack. The per-step map in `workflow-status-get` (`steps[] { id, name, type, status }`) is the intended step-ID source for send-to-step targets. Skipped steps show status `cancelled` there.
+
+**When some tools are permission-denied:** keep diagnosing with what you have. Entry-level reads blocked? Use config-level reads (`steps-list`/`steps-get` need the step-builder permission). Config reads blocked? Use entry-level state (`workflow-status-get` on entries you can see). Never stop at the first denial while relevant accessible tools remain — and name the exact missing permission in your summary rather than guessing at causes.
 
 3. Escalate mildest-first (all admin-gated):
    - `steps-restart` — reset the current step's assignee statuses and re-send notifications. Use when the assignee missed/lost the notification.
@@ -126,6 +130,10 @@ This is the ONE sanctioned exception to "don't edit workflow fields mid-step," a
 
 Every validation error names the concrete problem (unknown keys, invalid assignee, bad destination, invalid enum value) — fix exactly what it names and retry.
 
+### Feasibility and design questions
+
+When the user is asking whether something is possible, or how they would build it — **answer first, mutate nothing.** Do not create forms, steps, or entries to "demonstrate"; unrequested writes on a consultation are a failure. Read state where it helps (system-info, steps-list), confirm capabilities from [references/feasibility.md](references/feasibility.md), cite documentation links, ask the narrowing questions, and set scope expectations for large builds.
+
 ### Analytics
 
 - `reports-get { scope }` — scopes and required params: `all_forms` (per-form), `form` (per-month, needs `form_id`), `form_by_step` (needs `form_id`), `step_by_assignee` (needs `step_id`), `form_by_assignee` (needs `form_id`), `all_forms_by_assignee`, `assignee_by_month` (needs `assignee_key`). Defaults to the last 6 months. Rows carry `count` and `avg_duration_secs` plus scope-specific identifiers; durations are **seconds** — convert to human units when reporting.
@@ -138,7 +146,7 @@ Full detail in [references/processing.md](references/processing.md). The essenti
 
 - **Only `approval` and `user_input` steps are processable.** Anything else (notification, webhook, feed add-on steps…) returns `operation_not_supported` — those steps complete on their own; if one is stuck, use the unstick ladder instead.
 - **Valid `status` by step type:** approval → `approved` | `rejected` | `revert` (revert only if the step has reverting enabled); user_input → `complete` | `in_progress` (save progress without completing).
-- **Note requirements:** approval steps can be configured to REQUIRE a note on reject/revert. On that validation error, retry the same call with a `note`. Delegated calls always require a note.
+- **Note requirements:** approval steps can be configured to REQUIRE a note on reject/revert. On that validation error, retry the same call with a `note` — COMPOSE the note yourself from the user's stated rationale (policy reference, reason, context); if they gave none, a brief professional note stating the action and who requested it is correct. Do not stall the action to ask for note wording. Delegated calls always require a note.
 - **`field_values`** (user_input steps only): keys are `input_{field_id}` / `input_{field_id}.{sub}`. Only the step's *editable fields* are writable — anything else fails closed with an error naming the editable field IDs. Approval steps do not accept field values.
 - **Double-submit** → `assignee_already_processed`, no state change. Not an error to retry — the work is done.
 
