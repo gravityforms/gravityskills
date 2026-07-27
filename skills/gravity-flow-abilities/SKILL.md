@@ -109,8 +109,8 @@ For filters `status-search` doesn't offer, use `gravityforms/entries-search` wit
 
 There is no reassign ability. For steps whose assignees resolve from an entry field (assignee field, user field, email field), reassignment is exactly two calls:
 
-1. `gravityforms/entries-update` — set the entry's assignee field to the new user/email
-2. `gravityflow/steps-restart { entry_id }` — re-resolves assignees from the updated field and re-notifies
+1. `gravityforms/entries-update { "entry": { "id": 787, "3": "pat@newco.com" } }` — the entry ID goes INSIDE the entry object; set the assignee field (here field 3) to the new user/email
+2. `gravityflow/steps-restart { entry_id }` — re-resolves assignees from the updated field and re-sends notifications (email assignees get a fresh token link)
 
 This is the ONE sanctioned exception to "don't edit workflow fields mid-step," and it only works for field-resolved assignees. For steps with fixed user/role assignees, the step configuration itself must change — not yet possible via MCP; direct the user to the step settings screen.
 
