@@ -173,5 +173,6 @@ Full vocabulary, per-assignee meta, and the entries-search escape hatch: [refere
 | Updating assignees on a step with in-flight entries without warning the user | Every in-flight entry is rerouted and re-notified | Echo the count-bearing confirmation only after the user confirms the blast radius |
 | Deleting a step other steps route to | Blocked — dangling destinations | Update the referencing steps' destinations first (the error names them) |
 
+For "can Flow do X?" feasibility consultations: [references/feasibility.md](references/feasibility.md).
 For steps-process details and error codes: [references/processing.md](references/processing.md).
 For status vocabulary, meta keys, and search escape hatches: [references/status-reference.md](references/status-reference.md).
