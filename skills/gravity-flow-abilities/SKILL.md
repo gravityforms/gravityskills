@@ -93,7 +93,11 @@ Sort/prioritize by `workflow_timestamp` (when the task started waiting), not `da
 2. `timeline-get { entry_id }` → what already happened, in whose hands it stalled
 **Where admins get step IDs:** `steps-list` requires the step-builder permission, which workflow admins often lack. The per-step map in `workflow-status-get` (`steps[] { id, name, type, status }`) is the intended step-ID source for send-to-step targets. Skipped steps show status `cancelled` there.
 
-**When some tools are permission-denied:** keep diagnosing with what you have. Entry-level reads blocked? Use config-level reads (`steps-list`/`steps-get` need the step-builder permission). Config reads blocked? Use entry-level state (`workflow-status-get` on entries you can see). Never stop at the first denial while relevant accessible tools remain — and name the exact missing permission in your summary rather than guessing at causes.
+**When some tools are permission-denied, fall back — do not give up.** The denial of ONE tool is never the end of diagnosis; there is almost always another route:
+- `inbox-list` denied → `status-search` (find pending entries by form/step/assignee) → `workflow-status-get` on a specific entry.
+- `steps-list`/`steps-get` denied (step-builder permission) → `workflow-status-get` gives the per-step map, current step, assignees, and approval policy for any visible entry; `system-step-types` gives type capabilities.
+- Can't find the form by guessing IDs → `system-info` lists every workflow-enabled form with its title; match the user's description against those titles, then `steps-list`/`status-search` on the match.
+Only conclude "not discoverable" after the accessible routes are exhausted, and name the exact missing permission rather than inventing a cause. Never diagnose the MCP integration as "disabled" — if a tool call fails to connect, that is a transient client issue; retry.
 
 3. Escalate mildest-first (all admin-gated):
    - `steps-restart` — reset the current step's assignee statuses and re-send notifications. Use when the assignee missed/lost the notification.
@@ -101,9 +105,15 @@ Sort/prioritize by `workflow_timestamp` (when the task started waiting), not `da
    - `workflow-restart` — reset EVERY step status and reprocess from the top. Nuclear; requires confirmation phrase.
 4. Etiquette: after any admin intervention, `timeline-note-add` explaining what was done and why.
 
+**Recovering entries that skipped a step (no-assignee auto-complete).** When a step shows "No assignees" in the timeline and entries sailed past it (common after an assignee user is deleted or a role empties), workflow-restart is the WRONG tool — it resets everything and, if the step still has no valid assignee, the entries skip it again. The correct recovery: (1) fix the step's assignees first (via the step settings UI, or `steps-update` if the type is allowlisted) so the step has a real assignee; (2) THEN `workflow-send-to-step` each affected entry back to that step. Identify the affected set precisely (e.g. filter by the field that gated the step) rather than sweeping every entry. This needs a human decision on WHO the new assignee should be — stop and ask for that if it is not given.
+
 **Cancel vs restart:** `workflow-cancel` ends the workflow (assignees purged, entry kept, `final_status: cancelled`); `workflow-restart` starts it over. Cancelling is not deleting — the entry survives and can be restarted later.
 
 **Confirmation echo-back:** `workflow-cancel` requires `confirmation: "CANCEL WORKFLOW {entry_id}"`; `workflow-restart` requires `confirmation: "RESTART WORKFLOW {entry_id}"`. On a mismatch the error returns the exact expected phrase — echo it back precisely. Always confirm with the human before these operations.
+
+**Confirmation phrases are NOT self-authorization.** The echo-back exists so a human's "yes" gates the action — it is not a formality you satisfy on your own. Never construct and send a destructive confirmation in the same breath as discovering the operation; the user must have explicitly asked for THIS specific destructive action first. If they have not, stop and state exactly what you would do and what confirmation you need. This applies to every destructive tool: `workflow-cancel`, `workflow-restart`, `steps-delete`, and `steps-process` rejections/reverts.
+
+**Never use writes to discover.** Do not reject, delete, cancel, or restart anything to "find out" how a step is configured or what a validation rule is — that mutates real workflows and real entries. Discovery is always read-only: `steps-list`, `steps-get`, `system-step-type-schema`, `workflow-status-get`, `status-search`. If a config read is permission-denied, report that; do not substitute a destructive probe.
 
 ### Search
 

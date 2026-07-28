@@ -7,6 +7,7 @@ Customers often ask whether a workflow design is possible before building. These
 - **Approval chains**: unlimited sequential approval steps; per-step assignees (users, roles, emails, field-resolved); `"all"` (unanimous) or `"any"` approval policy per step; conditions on any step (GF conditional logic on field values) enable branch-per-department/amount/type designs.
 - **Approval loops / send-back**: approval steps can **revert** to a user-input step (revise-and-resubmit loops) and reject-destinations can point at any earlier step — multi-round review loops are native.
 - **User input steps**: assignees edit a configured subset of fields (`editable_fields`), can save progress (`in_progress`) before completing; display-fields config controls what each step's assignees see (reviewer-privacy patterns).
+- **Consent capture**: use the native Gravity Forms **Consent field** (a required GDPR checkbox with descriptive text) — not a plain checkbox. Signature capture needs the Signature add-on.
 - **Two-actor patterns** (candidate submits, referent completes hidden fields): initial submission + a user_input step whose editable fields are the referent-only fields. Field-level conditional logic on steps requires the step's "field conditional logic" setting.
 - **External participants without WordPress accounts**: email assignees act via signed token links from notification emails — supported for approval and user input steps. They cannot use MCP.
 - **Scheduling/delays**: steps can be scheduled (delay after previous step, or date/date-field based). Expiration with destinations handles "no response by X" routing; resend settings handle reminders.
@@ -23,14 +24,32 @@ Customers often ask whether a workflow design is possible before building. These
 
 ## Documentation links (verified)
 
-Cite these when answering feasibility/design questions — deep-link by searching within them rather than guessing article URLs:
+Cite the SPECIFIC article for each capability you mention — a feasibility answer without deep links is incomplete. Verified URLs:
 
-- Gravity Flow docs home: https://docs.gravityflow.io/
-- Flow fundamentals (steps, assignees, notifications, conditions): https://docs.gravityflow.io/category/flow-fundamentals/
-- User guides (worked workflow examples): https://docs.gravityflow.io/category/user-guides/
-- Extensions (PDF, Form Connector, Stripe, Checklists…): https://docs.gravityflow.io/category/extensions/
-- Developer reference (hooks, REST): https://docs.gravityflow.io/category/developers/
-- Gravity Forms docs (fields, conditional logic, feeds, merge tags): https://docs.gravityforms.com/
+**Gravity Flow — steps**
+- Approval step: https://docs.gravityflow.io/approval-step-type/
+- User Input step: https://docs.gravityflow.io/user-input-step-type/
+- Notification step: https://docs.gravityflow.io/notification-step-type/
+- Choice Routing step: https://docs.gravityflow.io/choice-routing-step/
+- Outgoing Webhook step: https://docs.gravityflow.io/outgoing-webhook-step-type/
+- Update User step: https://docs.gravityflow.io/update-user-step/
+- Types of steps and where they come from: https://docs.gravityflow.io/types-of-steps-and-where-they-come-from/
+- Step condition: https://docs.gravityflow.io/condition/
+- Next Step / routing: https://docs.gravityflow.io/next-step/
+- Schedule / delay: https://docs.gravityflow.io/schedule/
+
+**Gravity Flow — categories** (deep-link within when the topic isn't listed above)
+- Flow fundamentals: https://docs.gravityflow.io/category/flow-fundamentals/
+- Extensions (PDF, Form Connector, Stripe…): https://docs.gravityflow.io/category/extensions/
+- Developer reference: https://docs.gravityflow.io/category/developers/
+
+**Gravity Forms — fields & logic**
+- Consent field (GDPR checkbox): https://docs.gravityforms.com/consent/
+- Signature field (needs the Signature add-on): https://docs.gravityforms.com/signature/
+- Enabling conditional logic for fields: https://docs.gravityforms.com/enable-conditional-logic/
+- Conditional logic for notifications: https://docs.gravityforms.com/enable-conditional-logic-for-notifications/
+- Conditional logic for feeds: https://docs.gravityforms.com/enabling-conditional-logic-for-feeds/
+- Merge tags: https://docs.gravityforms.com/category/user-guides/merge-tags-getting-started/
 
 ## Scope expectations
 
