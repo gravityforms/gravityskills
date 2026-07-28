@@ -2,7 +2,7 @@
 name: gravity-flow-abilities
 description: Workflow guidance for AI agents using Gravity Flow abilities via the WordPress Abilities API (MCP). Load this skill when interacting with any gravityflow/* MCP tools — triaging the workflow inbox, approving/rejecting entries, submitting user input, diagnosing stuck workflows, admin actions (cancel/restart/send-to-step), or workflow reports and activity. Provides status vocabulary, assignee-key semantics, sequencing rules, and pitfall avoidance that tool schemas alone cannot express.
 license: GPL-2.0+
-compatibility: Requires a WordPress site with Gravity Flow 3.2+ (MCP enabled under Workflow → Settings → MCP) and Gravity Forms 2.9+
+compatibility: Requires Gravity Forms as the MCP host (MCP enabled under Forms → Settings → MCP, with Gravity Flow's tools enabled in its metabox) and Gravity Flow 3.2+ contributing its abilities to that endpoint
 metadata:
   author: gravityforms
   version: "0.1.0"
@@ -28,17 +28,17 @@ metadata:
 
 **Step configuration (read)** → `steps-list` (a form's steps, summary shape; optional `entry_id` adds per-entry statuses), `steps-get` (one step's sanitized settings)
 
-**Build (write)** → `system-step-type-schema` (settings schema for one type — call FIRST), `steps-create`, `steps-update` (partial merge), `steps-delete`
+**Build (write)** → `system-step-type-schema` (settings schema for one type — call FIRST), `steps-create`, `steps-update` (partial merge; also toggles `is_active` to deactivate/reactivate a step — the reversible alternative to delete), `steps-delete`
 
 **Analyze** → `reports-get` (aggregate completion counts and durations across 7 scopes), `activity-list` (recent workflow event feed — the audit view)
 
-All ability names use format `gravityflow/{area}-{action}`. On the dedicated endpoint, tool names are hyphenated: `gravityflow-inbox-list`.
+All ability names use format `gravityflow/{area}-{action}`; as MCP tools they appear hyphenated (`gravityflow-inbox-list`) on Gravity Forms' endpoint, alongside the `gravityforms-*` tools.
 
 **Step writes are allowlisted:** only `approval`, `user_input`, and `notification` steps can be created or modified programmatically; other types (feed add-on steps, routing, etc.) return an error naming the allowlist — configure those in the Flow admin UI. `workflow_start` / `workflow_complete` are auto-managed sentinels and can never be touched. Never attempt to create or modify workflow steps via `gravityforms/feeds-*` — Flow actively refuses generic feed tools targeting its steps and redirects you to `gravityflow/steps-*`.
 
 ## Division of Labor: Flow vs Forms
 
-Gravity Flow abilities return **entry IDs and workflow state — never entry field values**. Hydrate entry data with `gravityforms/entries-get`. The two servers are complementary and usually both connected:
+Gravity Flow abilities return **entry IDs and workflow state — never entry field values**. Hydrate entry data with `gravityforms/entries-get`. Both toolsets are served by Gravity Forms' single MCP endpoint, so they are always available together:
 
 - `gravityflow/*` — workflow: inbox, statuses, assignees, timeline, processing, admin actions, reports
 - `gravityforms/*` — data: entry field values, form structure, submissions, notes
@@ -50,22 +50,22 @@ Gravity Flow abilities return **entry IDs and workflow state — never entry fie
 
 ## Access Modes
 
-Flow's MCP surface is gated in **Workflow → Settings → MCP**, independently of Gravity Forms' MCP settings:
+Gravity Forms is the MCP host; Flow contributes its tools to GF's endpoint. Everything is gated in **Forms → Settings → MCP**, in the **Gravity Flow** metabox below Gravity Forms' own tools:
 
-1. **Enable MCP** (default: off) — master switch. When off, no `gravityflow/*` ability is exposed or callable.
-2. **Per-tool checkboxes** (default: every tool off) — grouped into **Read-only Tools** and **Write & Destructive Tools**. A tool is exposed and callable only when its box is checked. There is no blanket "read access."
+1. **Enable MCP** (Gravity Forms' master switch, default off) — gates the whole surface. When off, no `gravityflow/*` (or `gravityforms/*`) ability is exposed or callable.
+2. **Per-tool checkboxes** (default: every tool off) — Flow's metabox splits its tools into **Read-only** and **Write** columns; a tool is exposed and callable only when its box is checked. There is no blanket "read access."
 
-**Read-only group** (each opt-in): `inbox-list`, `inbox-count`, `status-search`, `workflow-status-get`, `timeline-get`, `steps-list`, `steps-get`, `system-info`, `system-step-types`, `reports-get`, `activity-list`
+**Read-only group** (each opt-in): `inbox-list`, `inbox-count`, `status-search`, `workflow-status-get`, `timeline-get`, `steps-list`, `steps-get`, `system-info`, `system-step-types`, `system-step-type-schema`, `reports-get`, `activity-list`
 
-**Write & destructive group** (each opt-in): `timeline-note-add`, `steps-process`, `steps-restart`, `workflow-send-to-step`, `workflow-restart`, `workflow-cancel`
+**Write & destructive group** (each opt-in): `timeline-note-add`, `steps-process`, `steps-restart`, `workflow-send-to-step`, `workflow-restart`, `workflow-cancel`, `steps-create`, `steps-update`, `steps-delete`
 
-If a tool is absent from discovery or a call is permission-denied, the admin has not enabled that specific tool (or MCP itself is off), or your user lacks the capability. Do not attempt workarounds — tell the user to enable the exact tool in Workflow → Settings → MCP, or which capability is missing.
+If a tool is absent from discovery or a call is permission-denied, the admin has not enabled that specific tool (or Gravity Forms' MCP is off), or your user lacks the capability. Do not attempt workarounds — tell the user to enable the exact tool in Forms → Settings → MCP (the Gravity Flow metabox), or which capability is missing.
 
 **Admin-screen handoff URLs** (when a change needs the Flow admin UI, give the user a direct link): step settings live at `{site}/wp-admin/admin.php?page=gf_edit_forms&view=settings&subview=gravityflow&id={form_id}&fid={step_id}` — build these from `steps-list` output when recommending manual configuration.
 
 ### Endpoint
 
-The dedicated server lives at `/wp-json/mcp/gravityflow` and works regardless of Gravity Forms' MCP toggle. Tool names there are direct (`gravityflow-steps-process`) with full JSON Schemas. When the site-wide WordPress MCP server exists (GF site mode), Flow abilities also appear through its `discover-abilities` / `execute-ability` meta-tools. Same abilities either way; only transport differs.
+Flow's tools ride Gravity Forms' MCP endpoint — there is no separate Flow endpoint. On GF's dedicated endpoint (`/wp-json/mcp/gravityforms`) each tool is listed directly (`gravityflow-steps-process`) with full JSON Schemas, alongside the `gravityforms-*` tools. In GF site-endpoint mode the same abilities appear through the site MCP server's `discover-abilities` / `execute-ability` meta-tools. Same abilities either way; only transport differs.
 
 ## Acting User Model
 
@@ -136,7 +136,8 @@ This is the ONE sanctioned exception to "don't edit workflow fields mid-step," a
 2. `steps-create { form_id, step_type, step_name, assignees, destination_complete, condition, settings }` — first-class inputs cover the common cases; everything else goes in `settings`. Assignees use `type|id` keys; the internal assignee-source discriminator is handled for you. New steps append to the end of the workflow. Conditions are GF conditional-logic objects (`{actionType, logicType, rules}`) gating whether the step runs.
 3. Verify with `steps-list` — check order and destinations.
 4. `steps-update { step_id, ... }` — partial merge; a step's type is immutable. **When entries are in flight on the step, the update is blocked until you echo `UPDATE STEP {id} AFFECTING {n} ENTRIES`** — and changing assignee settings reroutes ALL of those entries (assignees re-resolved and re-notified automatically). If the user's request itself already specifies the change ("assign it to the finance role"), that IS the authorization — echo the count-bearing confirmation and proceed, reporting the blast radius in your summary. Only stop to confirm when the request leaves the decision open or the in-flight impact plainly exceeds what the user described.
-5. `steps-delete { step_id, confirmation }` — always needs `DELETE STEP {id} FROM FORM {form_id}`; if entries sit on the step the error escalates to a count-bearing phrase (`DELETE STEP {id} AFFECTING {n} ENTRIES`). Prefer moving in-flight entries with `workflow-send-to-step` first. Deletes are blocked while other steps' destinations route to the step — update those destinations first (the error names them).
+5. **Deactivate instead of delete when the intent is "stop this step from running."** `steps-update { step_id, is_active: false }` pauses a step reversibly — its config and history are kept and it can be switched back on with `is_active: true`. A bare toggle needs no confirmation phrase. This is the safe, undoable alternative; reach for delete only when a step must be permanently removed.
+6. `steps-delete { step_id, confirmation }` — **permanent, no undo.** Always needs `DELETE STEP {id} FROM FORM {form_id}`; if entries sit on the step the error escalates to a count-bearing phrase (`DELETE STEP {id} AFFECTING {n} ENTRIES`). Prefer moving in-flight entries with `workflow-send-to-step` first, or deactivating (above) rather than deleting. Deletes are blocked while other steps' destinations route to the step — update those destinations first (the error names them).
 
 Every validation error names the concrete problem (unknown keys, invalid assignee, bad destination, invalid enum value) — fix exactly what it names and retry.
 
@@ -185,7 +186,7 @@ Full vocabulary, per-assignee meta, and the entries-search escape hatch: [refere
 | `field_values` on an approval step, or on non-editable fields | Rejected fail-closed | user_input steps only; respect the editable-field list in the error |
 | Sorting inbox by `date_created` | Oldest *submission* ≠ longest-*waiting* task | Sort by `workflow_timestamp` |
 | Treating `status-search`'s thin results as "no entries" | Degraded mode shows own submissions only | Report the missing view-all permission instead |
-| Tool absent from discovery | Admin hasn't enabled that tool (or MCP is off) | Point to Workflow → Settings → MCP; no workarounds |
+| Tool absent from discovery | Admin hasn't enabled that tool (or GF's MCP is off) | Point to Forms → Settings → MCP (Gravity Flow metabox); no workarounds |
 | Building/modifying steps via `gravityforms/feeds-*` | Actively refused by Flow | Use `gravityflow/steps-create` / `steps-update` / `steps-delete` |
 | Guessing settings keys on steps-create/update | Unknown keys rejected, nothing saved | Call `system-step-type-schema` first |
 | Updating assignees on a step with in-flight entries without warning the user | Every in-flight entry is rerouted and re-notified | Echo the count-bearing confirmation only after the user confirms the blast radius |
