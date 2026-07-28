@@ -12,7 +12,7 @@ metadata:
 
 ## Ability Routing
 
-25 abilities across 7 categories. Select based on intent:
+32 abilities across 8 categories. Select based on intent:
 
 **Discover** → `system-field-types` (field types), `system-info` (site identity, version, license, add-ons — includes `site_url` and `site_name` for multi-site disambiguation), `forms-list` (all forms as summaries: id, title, is_active, date_created, field_count), `forms-get` (single form with full field detail)
 
@@ -26,7 +26,9 @@ metadata:
 
 **Integrations** → `feeds-list`, `feeds-create`, `feeds-update`, `feeds-delete`
 
-**Notifications** → `notifications-list`, `notifications-send` (re-send for existing entry)
+**Notifications** → `notifications-list`, `notifications-create` / `notifications-update` / `notifications-delete` (targeted config edits — the canonical path, NOT forms-update), `notifications-send` (re-send for an existing entry)
+
+**Confirmations** → `confirmations-list`, `confirmations-create` / `confirmations-update` / `confirmations-delete` (the message / page / redirect a submitter sees after submitting)
 
 **Audit** → `notes-list`, `notes-add` (annotate entries)
 
@@ -41,9 +43,9 @@ The MCP settings page (GF Settings → MCP) gates access with a master switch pl
 
 So an ability is available only when **Enable MCP is on AND that specific tool is checked**. A freshly enabled integration exposes nothing until tools are opted in.
 
-**Read-only group** (each opt-in): `forms-get`, `forms-list`, `forms-analyze-logic`, `entries-get`, `entries-search`, `entries-count`, `submissions-validate`, `feeds-list`, `notifications-list`, `notes-list`, `system-info`, `system-field-types`
+**Read-only group** (each opt-in): `forms-get`, `forms-list`, `forms-analyze-logic`, `entries-get`, `entries-search`, `entries-count`, `submissions-validate`, `feeds-list`, `notifications-list`, `confirmations-list`, `notes-list`, `system-info`, `system-field-types`
 
-**Write & destructive group** (each opt-in): `forms-create`, `forms-update`, `forms-delete`, `forms-duplicate`, `entries-create`, `entries-update`, `entries-delete`, `feeds-create`, `feeds-update`, `feeds-delete`, `submissions-submit`, `notifications-send`, `notes-add`
+**Write & destructive group** (each opt-in): `forms-create`, `forms-update`, `forms-delete`, `forms-duplicate`, `entries-create`, `entries-update`, `entries-delete`, `feeds-create`, `feeds-update`, `feeds-delete`, `submissions-submit`, `notifications-send`, `notifications-create`, `notifications-update`, `notifications-delete`, `confirmations-create`, `confirmations-update`, `confirmations-delete`, `notes-add`
 
 If an ability is not available (absent from discovery, or a direct call is permission-denied), the admin has not enabled that specific tool (or MCP itself is off). Do not attempt workarounds — tell the user to enable the exact tool, and Enable MCP, in GF Settings → MCP.
 
@@ -106,7 +108,22 @@ Use `{admin_email}` for site admin, or a specific address. `{all_fields}` render
 2. Modify the returned fields array (add/remove/change)
 3. Call `forms-update` with the complete form object
 
-`notifications` and `confirmations` merge by key — safe for partial updates. `fields` does NOT merge.
+`notifications` and `confirmations` passed to `forms-update` merge by key — handy when standing up a whole form at once. For **targeted edits to a single notification or confirmation — including deletion — use the dedicated tools below**, not `forms-update` (they don't round-trip the whole form, so they can't drop fields). `fields` does NOT merge.
+
+### Notifications & Confirmations
+
+Notifications (emails) and confirmations (the message / page / redirect shown after submit) are keyed objects on the form. Edit them with the dedicated tools — the canonical path.
+
+**Always read before you write.** Call `notifications-list` / `confirmations-list` first to get the `id` of the item to change (the list carries the full objects; there is no separate "get one").
+
+- **Create** → `notifications-create` / `confirmations-create` with a settings object; the tool generates and returns the id.
+  - A notification needs `name`, `event` (e.g. `form_submission`), `to` (an email, or a field id / routing per `toType`), `subject`, and `message` (merge tags + HTML OK).
+  - A confirmation needs `name` and a `type`: `message` (needs `message`), `page` (needs `pageId`), or `redirect` (needs `url`).
+- **Update** → `notifications-update` / `confirmations-update` with the `notification_id` / `confirmation_id` and only the keys to change (partial merge; the id is immutable). The result must still satisfy the required fields above.
+- **Delete** → `notifications-delete` / `confirmations-delete` by id. The form's **default confirmation cannot be deleted** (edit it instead) — every form keeps one fallback.
+- **Route by condition** → add a `conditionalLogic` object (`{actionType, logicType, rules}`) so a notification sends — or a confirmation shows — only on matching submissions. For notifications `actionType: "show"` means "send when matched"; the default confirmation shows when none match. See [references/conditional-logic.md](references/conditional-logic.md).
+
+Common shapes: route different emails to clinicians vs patients (two notifications, each with `conditionalLogic` on a role/type field); show a tailored thank-you page per department (conditional confirmations + the default as fallback).
 
 ### Submitting a Form
 
