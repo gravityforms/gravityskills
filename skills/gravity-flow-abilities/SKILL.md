@@ -75,6 +75,7 @@ MCP authenticates as a real WordPress user (application password). Every ability
 - **Processing as self** requires the authenticated user to be a *pending assignee* on the entry's current step — the same rule the web inbox enforces.
 - **Delegated processing** (`steps-process` with `assignee_key`) acts on behalf of another pending assignee. It requires workflow-admin permission AND a `note` explaining why. The action is dual-attributed: the timeline note names both identities (`[On behalf of X (key)] …`) and the activity feed records a `delegated` event. A delegated action is never indistinguishable from the assignee acting themselves.
 - **Entry visibility:** entry-scoped abilities (`workflow-status-get`, `timeline-get`, `timeline-note-add`, `steps-list` with `entry_id`) succeed only when the user has view-all permission, is the entry's submitter, or is a current/past assignee. An invisible entry returns the same error as a nonexistent one — do not retry or enumerate; verify existence via `status-search` or ask the user.
+- **Never report absence without verifying.** `system-info`'s workflow-form list is a *summary* — a form not obviously matching the goal there is NOT proof it lacks a workflow or doesn't exist. Before telling the user "no such form/workflow/step," confirm: call `steps-list { form_id }` on the candidate form (workflow-enabled forms have steps) or `status-search`. Concluding absence from a single `system-info` read is a failure mode; the target is usually discoverable with one more read.
 
 ## Core Workflows
 

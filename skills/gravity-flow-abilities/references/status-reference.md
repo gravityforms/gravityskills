@@ -29,6 +29,8 @@ A rejected approval does not necessarily end the workflow — reject destination
 
 Within a pending step, each assignee has their own status (`pending`, `approved`, `rejected`, `complete`). Multi-assignee approval steps combine them by policy — `workflow-status-get`'s `current_step.approval_policy` states it directly: `"all"` (unanimous — every assignee must act; one approval with the step still pending is normal, name who is still pending) or `"any"` (first decision wins). The live list is `assignees[] { key, display_name, status }`.
 
+This policy is a **configurable step setting**, not a fixed law. If a workflow is stuck because it demands unanimous approval and the user wants any-one-approves instead (or vice versa), that is a `steps-update` on the step's approval settings — surface it as the real remedy (or a decision point to confirm), rather than only restarting/re-notifying to chase the missing approvals.
+
 ## Assignee key format
 
 `type|id`:
