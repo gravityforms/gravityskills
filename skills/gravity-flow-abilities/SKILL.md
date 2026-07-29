@@ -133,6 +133,8 @@ This is the ONE sanctioned exception to "don't edit workflow fields mid-step," a
 
 ### Building workflow steps
 
+**Build it — don't just describe it.** When asked to set up a workflow, actually create the steps; do not stop at a design and ask permission to proceed. If a detail you genuinely can't know blocks *one* setting — the exact user/role to assign, a real URL — still build the full structure with a defensible placeholder (the closest matching `role|…`, or a clearly-named stand-in) and hand off ONLY that specific detail, with the exact `steps-update` call that finalizes it. Producing a plan while creating nothing fails a build request. (This is different from a pure *feasibility* question — see below — where you answer and mutate nothing.)
+
 1. `system-step-type-schema { step_type, form_id }` — the settings vocabulary for the type. **Unknown settings keys are rejected on create/update (nothing saves), so never guess keys.**
 2. `steps-create { form_id, step_type, step_name, assignees, destination_complete, condition, settings }` — first-class inputs cover the common cases; everything else goes in `settings`. Assignees use `type|id` keys; the internal assignee-source discriminator is handled for you. New steps append to the end of the workflow. Conditions are GF conditional-logic objects (`{actionType, logicType, rules}`) gating whether the step runs.
 3. Verify with `steps-list` — check order and destinations.
