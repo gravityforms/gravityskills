@@ -74,8 +74,9 @@ MCP authenticates as a real WordPress user (application password). Every ability
 - **Inbox is personal.** `inbox-list` returns tasks assigned to the authenticated user (directly, via role, or via resolved fields). Different credentials = different inbox.
 - **Processing as self** requires the authenticated user to be a *pending assignee* on the entry's current step — the same rule the web inbox enforces.
 - **Delegated processing** (`steps-process` with `assignee_key`) acts on behalf of another pending assignee. It requires workflow-admin permission AND a `note` explaining why. The action is dual-attributed: the timeline note names both identities (`[On behalf of X (key)] …`) and the activity feed records a `delegated` event. A delegated action is never indistinguishable from the assignee acting themselves.
-- **Entry visibility:** entry-scoped abilities (`workflow-status-get`, `timeline-get`, `timeline-note-add`, `steps-list` with `entry_id`) succeed only when the user has view-all permission, is the entry's submitter, or is a current/past assignee. An invisible entry returns the same error as a nonexistent one — do not retry or enumerate; verify existence via `status-search` or ask the user.
+- **Entry visibility:** entry-scoped abilities (`workflow-status-get`, `timeline-get`, `timeline-note-add`, `steps-list` with `entry_id`) succeed only when the user holds the **`gravityflow_status_view_all`** capability, is the entry's submitter, or is a current/past assignee. An invisible entry returns the same error as a nonexistent one — do not retry or enumerate; verify existence via `status-search` or ask the user. To let someone (e.g. a manager) see *other* users' entries without making them a WordPress administrator, the answer is to grant `gravityflow_status_view_all` to their role — that exact capability, never a broader role. (The MCP surface exposes no role/capability directory, so you cannot enumerate which roles already hold it; name the capability and how to grant it.)
 - **Never report absence without verifying.** `system-info`'s workflow-form list is a *summary* — a form not obviously matching the goal there is NOT proof it lacks a workflow or doesn't exist. Before telling the user "no such form/workflow/step," confirm: call `steps-list { form_id }` on the candidate form (workflow-enabled forms have steps) or `status-search`. Concluding absence from a single `system-info` read is a failure mode; the target is usually discoverable with one more read.
+- **Workflow content lives in the steps, not just the form.** When a request concerns instructions, notifications, assignees, due dates, or any per-step content ("update the dates", "add instructions", "who is assigned", "which notifications go out"), enumerate the workflow with `steps-list` then `steps-get` on each step — form-level settings (title, form schedule, form notifications) are only part of the surface. Editing the form and stopping there, then claiming the request is complete, is a failure mode: the step layer (step instructions, assignee/reject notifications, step schedules and due dates) usually holds most of what the request targets. Sweep every step before reporting done.
 
 ## Core Workflows
 
@@ -118,7 +119,7 @@ Only conclude "not discoverable" after the accessible routes are exhausted, and 
 
 ### Search
 
-`status-search` filters: `form_id`, `status` (workflow final status), `step_id`, `assignee_key`, date range, paging. With view-all permission it spans all entries; without it, results are silently limited to the user's **own submissions** — if results look incomplete, that's why (tell the user which permission is missing rather than retrying).
+`status-search` filters: `form_id`, `status` (workflow final status), `step_id`, `assignee_key`, date range, paging. With the `gravityflow_status_view_all` capability it spans all entries; without it, results are silently limited to the user's **own submissions** — if results look incomplete, that's why (tell the user which permission is missing rather than retrying).
 
 For filters `status-search` doesn't offer, use `gravityforms/entries-search` with workflow meta keys as `field_filters` — key table in [references/status-reference.md](references/status-reference.md).
 
@@ -142,7 +143,9 @@ This is the ONE sanctioned exception to "don't edit workflow fields mid-step," a
 5. **Deactivate instead of delete when the intent is "stop this step from running."** `steps-update { step_id, is_active: false }` pauses a step reversibly — its config and history are kept and it can be switched back on with `is_active: true`. A bare toggle needs no confirmation phrase. This is the safe, undoable alternative; reach for delete only when a step must be permanently removed.
 6. `steps-delete { step_id, confirmation }` — **permanent, no undo.** Always needs `DELETE STEP {id} FROM FORM {form_id}`; if entries sit on the step the error escalates to a count-bearing phrase (`DELETE STEP {id} AFFECTING {n} ENTRIES`). Prefer moving in-flight entries with `workflow-send-to-step` first, or deactivating (above) rather than deleting. Deletes are blocked while other steps' destinations route to the step — update those destinations first (the error names them).
 
-Every validation error names the concrete problem (unknown keys, invalid assignee, bad destination, invalid enum value) — fix exactly what it names and retry.
+Most validation errors name the concrete problem (unknown keys, invalid assignee, bad destination, invalid enum value) — fix exactly what it names and retry.
+
+**Notification recipients must be valid assignee keys — there is no `submitter` recipient.** To email the person who submitted the entry (e.g. a reject notification telling an applicant the outcome), route the notification to the submission's **email field** (`email_field|{id}`) or a literal `email|{address}` — never a bare string like `"submitter"`. Unlike settings keys, notification **recipients are not always validated on save**: an invalid recipient such as `submitter` (or a non-array recipient value) can be stored *without error* and then silently send to no one. So after configuring any step or reject/revert notification, confirm the recipient resolves to a real `type|id` / `email_field` target, and never report "the submitter will be notified" unless the recipient is a valid resolvable key. When the submitter's email isn't captured in a field, that's a genuine gap to hand back to the user — not something to paper over with a `submitter` placeholder.
 
 ### Feasibility and design questions
 
@@ -192,6 +195,7 @@ Full vocabulary, per-assignee meta, and the entries-search escape hatch: [refere
 | Tool absent from discovery | Admin hasn't enabled that tool (or GF's MCP is off) | Point to Forms → Settings → MCP (Gravity Flow metabox); no workarounds |
 | Building/modifying steps via `gravityforms/feeds-*` | Actively refused by Flow | Use `gravityflow/steps-create` / `steps-update` / `steps-delete` |
 | Guessing settings keys on steps-create/update | Unknown keys rejected, nothing saved | Call `system-step-type-schema` first |
+| Using `submitter` (or a bare string) as a notification recipient | Silently stored, emails no one — recipients aren't always validated | Route to the submission's `email_field|{id}` / `email|{address}`; verify the recipient resolves |
 | Updating assignees on a step with in-flight entries without warning the user | Every in-flight entry is rerouted and re-notified | Echo the count-bearing confirmation only after the user confirms the blast radius |
 | Deleting a step other steps route to | Blocked — dangling destinations | Update the referencing steps' destinations first (the error names them) |
 
