@@ -80,6 +80,11 @@ The agent does not need to know which mode is active — the MCP client handles 
 
 Never guess field types. `system-field-types` returns `supports_choices`, `has_inputs`, `default_inputs`, and support flags for each type.
 
+**International phone field (Gravity Forms 3.0).** The `phone` field is still one type, but it has a `phoneFormat` setting: `"standard"` (a plain-string value) or `"formatted"` (international, paired with a `defaultCountry` like `"us"`). A **formatted** phone does NOT store a plain string — its value is a JSON object with the keys `country`, `national`, `formatted`, and `e164` (the `e164` value is validated against the E.164 standard). This changes how every entry-facing ability handles it:
+- **Creating the field** (`forms-create` / `forms-update`): set `"phoneFormat": "formatted"` (plus `defaultCountry`) for international; omit it for a standard phone.
+- **Reading** (`entries-get` / `entries-search`): a formatted phone comes back as that JSON object, not a plain number — parse it (use `e164` for the canonical number), don't treat it as a string.
+- **Writing / submitting** (`entries-update`, `submissions-submit`, `submissions-validate`): supply the JSON object with a valid `e164`, not a bare number, or validation fails. (`entries-create` is a raw insert, so match the same shape to keep the value usable.)
+
 **Default admin notification template:**
 ```json
 {
