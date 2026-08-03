@@ -5,7 +5,7 @@ license: GPL-2.0+
 compatibility: Requires a WordPress site with Gravity Forms 2.9+ and the MCP endpoint enabled (GF Settings → MCP)
 metadata:
   author: gravityforms
-  version: "1.0.0"
+  version: "1.0.3"
 ---
 
 # Gravity Forms Abilities — Agent Skill
@@ -53,18 +53,18 @@ If an ability is not available (absent from discovery, or a direct call is permi
 
 The MCP settings page also controls how GF abilities are exposed:
 
-- **Site MCP** (default) — GF abilities are registered on the shared WordPress MCP endpoint (`/wp-json/mcp/v1`). They appear alongside abilities from other plugins and are accessed through the default server's meta-tools (`discover-abilities`, `execute-ability`, `get-ability-schema`).
+- **Site MCP** (default) — GF abilities are registered on the shared WordPress MCP endpoint (`/wp-json/mcp/mcp-adapter-default-server`). They appear alongside abilities from other plugins and are accessed through the default server's meta-tools (`mcp-adapter-discover-abilities`, `mcp-adapter-execute-ability`, `mcp-adapter-get-ability-info`).
 - **Dedicated Endpoint** — GF registers its own MCP server at `/wp-json/mcp/gravityforms`. Each ability becomes a direct MCP tool (e.g., `gravityforms-forms-get` instead of going through `execute-ability`). GF abilities are hidden from the default server.
 
 **When using dedicated endpoint mode:**
 - Tool names use hyphen format: `gravityforms-forms-get`, `gravityforms-entries-search`, etc. (the `/` in ability names is converted to `-`)
-- Each tool has its own full JSON Schema — no need to call `get-ability-schema` first
+- Each tool has its own full JSON Schema — no need to call `mcp-adapter-get-ability-info` first
 - The MCP client must be configured to connect to the GF server endpoint separately
 - Both servers can coexist — the default server serves other plugins' abilities while GF serves its own
 
 **When using site MCP mode (default):**
-- All abilities accessed through the shared endpoint's `execute-ability` meta-tool
-- Tool name passed as a parameter: `execute-ability` with `{"ability": "gravityforms/forms-get", ...}`
+- All abilities accessed through the shared endpoint's `mcp-adapter-execute-ability` meta-tool
+- Tool name passed as a parameter: `mcp-adapter-execute-ability` with `{"ability": "gravityforms/forms-get", ...}`
 - This is the simpler setup — one MCP connection covers all plugins
 
 The agent does not need to know which mode is active — the MCP client handles routing. The same abilities are available in both modes; only the transport differs.
@@ -74,14 +74,14 @@ The agent does not need to know which mode is active — the MCP client handles 
 ### Creating a Form
 
 1. Call `system-field-types` — discover available types and capabilities
-2. Build form object with `title` and `fields` array
+2. Build form object with `title` and `fields` array — for `phone` fields, ALWAYS set `phoneFormat` explicitly (see the phone section below)
 3. **Include a `notifications` object** — `forms-create` does NOT auto-create a default admin notification (unlike the GF admin UI). Without one, submissions are saved but no email is sent.
 4. Call `forms-create` — returns `form_id` and `edit_url`
 
 Never guess field types. `system-field-types` returns `supports_choices`, `has_inputs`, `default_inputs`, and support flags for each type.
 
-**International phone field (Gravity Forms 3.0).** The `phone` field is still one type, but it has a `phoneFormat` setting with exactly three valid values: `"standard"` (US-masked plain string), `"international"` (unformatted plain string), or `"formatted"` (international UI, paired with a `defaultCountry` like `"us"`). Never invent or abbreviate other values — an unknown `phoneFormat` breaks form rendering. A **formatted** phone does NOT store a plain string — its value is a JSON object with the keys `country`, `national`, `formatted`, and `e164` (the `e164` value is validated against the E.164 standard). This changes how every entry-facing ability handles it:
-- **Creating the field** (`forms-create` / `forms-update`): ALWAYS set `phoneFormat` explicitly — `"standard"` for a US phone, `"formatted"` (plus `defaultCountry`) for international. Do not omit it: fields created through the API skip the editor's normalization, so an omitted format is not backfilled.
+**International phone field (Gravity Forms 3.0).** The `phone` field is still one type, but it has a `phoneFormat` setting with exactly three valid values: `"standard"` (US-masked plain string), `"international"` (unformatted plain string), or `"formatted"` (international UI, paired with a `defaultCountry` like `"us"`). The `system-field-types` phone entry reports the site's valid values as `format_options` — use those exact strings and never invent or abbreviate others; an unknown `phoneFormat` breaks form rendering. A **formatted** phone does NOT store a plain string — its value is a JSON object with the keys `country`, `national`, `formatted`, and `e164` (the `e164` value is validated against the E.164 standard). This changes how every entry-facing ability handles it:
+- **Creating the field** (`forms-create` / `forms-update`): ALWAYS set `phoneFormat` explicitly — `"standard"` for a US phone, `"formatted"` (plus `defaultCountry`) for international. Do not omit it: older Gravity Forms versions do not backfill an omitted format on API-created fields, which breaks form rendering.
 - **Reading** (`entries-get` / `entries-search`): a formatted phone comes back as that JSON object, not a plain number — parse it (use `e164` for the canonical number), don't treat it as a string.
 - **Writing / submitting** (`entries-update`, `submissions-submit`, `submissions-validate`): supply the JSON object with a valid `e164`, not a bare number, or validation fails. (`entries-create` is a raw insert, so match the same shape to keep the value usable.)
 
@@ -350,6 +350,7 @@ For CL structure details, operators, and common patterns, see [references/condit
 | Fileupload field without `allowedExtensions`/`maxFileSize` | Accepts any file type/size — security risk | Always set `allowedExtensions` and `maxFileSize` — see field-config reference |
 | Creating a form without `notifications` | Submissions saved but no email sent — admin never notified | Always include a notification object — see "Creating a Form" workflow |
 | Creating a name field without `nameFormat: "advanced"` | First/Last sub-inputs render stacked vertically instead of side-by-side | Always set `"nameFormat": "advanced"` and `"size": "large"` on name fields — see field-config reference |
+| Creating a phone field without an explicit `phoneFormat` (or with an invented value) | On older GF versions the field fatals when rendered (form editor and frontend); format behavior is undefined | ALWAYS set `phoneFormat` explicitly to one of the values `system-field-types` reports in `format_options` (`"standard"`, `"international"`, `"formatted"`) — see field-config reference |
 | Passing multiselect values as comma-separated string | Data loss when values contain commas (e.g., "Atlanta, GA") | Always pass multiselect values as an **array**: `"input_1": ["Red", "Blue"]` — see field-config reference |
 | User asks to "create a form and add it to a page" | Cannot create WordPress pages/posts — only GF abilities exist | Create the form, then tell the user the shortcode `[gravityform id="X" title="true"]` to embed manually. Page/post creation is not currently available via the Abilities API. |
 | Ability not found (e.g., `forms-create`) | Site admin has not checked that specific tool (or Enable MCP is off) in MCP settings | Tell the user to enable the exact tool — and Enable MCP — in GF Settings → MCP. There is no blanket "write access" toggle; each tool is opted in individually. Do not attempt workarounds. |
