@@ -5,3 +5,4 @@
 .DS_Store
 .env
 dist/
+.claude/settings.local.json

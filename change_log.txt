@@ -1,3 +1,12 @@
+### 1.1.0 | 2026-08-04
+- gravity-flow-abilities: Add the skill — workflow guidance for Gravity Flow abilities via the WordPress Abilities API (MCP), covering step CRUD, approval policies, reassignment, and feasibility consultation.
+- gravity-forms-abilities: Add a phone pitfall row and a phone step to the form-creation workflow; an omitted phoneFormat breaks rendering on older Gravity Forms versions.
+- gravity-forms-abilities: Add documentation for the notification and confirmation write abilities.
+- gravity-forms-abilities: Correct the shared MCP endpoint path (/wp-json/mcp/mcp-adapter-default-server) and the meta-tool names (mcp-adapter-discover-abilities, mcp-adapter-execute-ability, mcp-adapter-get-ability-info).
+- gravity-forms-abilities: Document the Gravity Forms 3.0 international phone field value shape.
+- gravity-forms-abilities: Fix the entries-search escape-hatch examples to use form_ids.
+- gravity-forms-abilities: Require an explicit phoneFormat on phone fields — document all three valid values plus defaultCountry/showCountryCode, and surface the format_options discovery key from system-field-types.
+
 ### 1.0.2 | 2026-06-18
 - gravity-forms-abilities: Add a warning against deprecated Ready Classes in favor of the layout grid.
 - gravity-forms-abilities: Add documentation for the 100-entry bulk-delete cap and the count/delete loop.

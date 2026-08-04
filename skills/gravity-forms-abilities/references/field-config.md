@@ -203,7 +203,16 @@ Example — multi-file with limit:
 
 | Property | Type | Description |
 |---|---|---|
-| `phoneFormat` | string | `"standard"` (US: (###) ###-####) or `"international"` (free-form) |
+| `phoneFormat` | string | **Always set explicitly.** Exactly one of: `"standard"` (US: (###) ###-####), `"international"` (plain unformatted input), or `"formatted"` (international UI with country selector; stores JSON — see SKILL.md). Never invent other values — an unknown format breaks form rendering. `system-field-types` reports the site's valid values in `format_options` (sites can add custom formats via filter). |
+| `defaultCountry` | string | `"formatted"` only. Two-letter lowercase country code preselected in the country dropdown (e.g. `"us"`, `"gb"`). |
+| `showCountryCode` | boolean | `"formatted"` only. Whether the country calling code is shown in the input. Defaults to `true`. |
+
+```json
+{ "type": "phone", "label": "Phone", "phoneFormat": "standard" }
+```
+```json
+{ "type": "phone", "label": "Mobile", "phoneFormat": "formatted", "defaultCountry": "us" }
+```
 
 ### Consent (`type: consent`)
 

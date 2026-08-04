@@ -176,7 +176,7 @@ CL is set as a property on individual fields during `forms-update`:
 
 ### Send notification only for specific selections
 
-Set on the notification object (via `forms-update` on the `notifications` property):
+Set the `conditionalLogic` on the notification via `notifications-update` (the canonical targeted path; `notifications-create` accepts it too):
 
 ```json
 {

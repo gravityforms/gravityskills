@@ -5,14 +5,14 @@ license: GPL-2.0+
 compatibility: Requires a WordPress site with Gravity Forms 2.9+ and the MCP endpoint enabled (GF Settings → MCP)
 metadata:
   author: gravityforms
-  version: "1.0.0"
+  version: "1.0.3"
 ---
 
 # Gravity Forms Abilities — Agent Skill
 
 ## Ability Routing
 
-25 abilities across 7 categories. Select based on intent:
+32 abilities across 8 categories. Select based on intent:
 
 **Discover** → `system-field-types` (field types), `system-info` (site identity, version, license, add-ons — includes `site_url` and `site_name` for multi-site disambiguation), `forms-list` (all forms as summaries: id, title, is_active, date_created, field_count), `forms-get` (single form with full field detail)
 
@@ -26,7 +26,9 @@ metadata:
 
 **Integrations** → `feeds-list`, `feeds-create`, `feeds-update`, `feeds-delete`
 
-**Notifications** → `notifications-list`, `notifications-send` (re-send for existing entry)
+**Notifications** → `notifications-list`, `notifications-create` / `notifications-update` / `notifications-delete` (targeted config edits — the canonical path, NOT forms-update), `notifications-send` (re-send for an existing entry)
+
+**Confirmations** → `confirmations-list`, `confirmations-create` / `confirmations-update` / `confirmations-delete` (the message / page / redirect a submitter sees after submitting)
 
 **Audit** → `notes-list`, `notes-add` (annotate entries)
 
@@ -41,9 +43,9 @@ The MCP settings page (GF Settings → MCP) gates access with a master switch pl
 
 So an ability is available only when **Enable MCP is on AND that specific tool is checked**. A freshly enabled integration exposes nothing until tools are opted in.
 
-**Read-only group** (each opt-in): `forms-get`, `forms-list`, `forms-analyze-logic`, `entries-get`, `entries-search`, `entries-count`, `submissions-validate`, `feeds-list`, `notifications-list`, `notes-list`, `system-info`, `system-field-types`
+**Read-only group** (each opt-in): `forms-get`, `forms-list`, `forms-analyze-logic`, `entries-get`, `entries-search`, `entries-count`, `submissions-validate`, `feeds-list`, `notifications-list`, `confirmations-list`, `notes-list`, `system-info`, `system-field-types`
 
-**Write & destructive group** (each opt-in): `forms-create`, `forms-update`, `forms-delete`, `forms-duplicate`, `entries-create`, `entries-update`, `entries-delete`, `feeds-create`, `feeds-update`, `feeds-delete`, `submissions-submit`, `notifications-send`, `notes-add`
+**Write & destructive group** (each opt-in): `forms-create`, `forms-update`, `forms-delete`, `forms-duplicate`, `entries-create`, `entries-update`, `entries-delete`, `feeds-create`, `feeds-update`, `feeds-delete`, `submissions-submit`, `notifications-send`, `notifications-create`, `notifications-update`, `notifications-delete`, `confirmations-create`, `confirmations-update`, `confirmations-delete`, `notes-add`
 
 If an ability is not available (absent from discovery, or a direct call is permission-denied), the admin has not enabled that specific tool (or MCP itself is off). Do not attempt workarounds — tell the user to enable the exact tool, and Enable MCP, in GF Settings → MCP.
 
@@ -51,18 +53,18 @@ If an ability is not available (absent from discovery, or a direct call is permi
 
 The MCP settings page also controls how GF abilities are exposed:
 
-- **Site MCP** (default) — GF abilities are registered on the shared WordPress MCP endpoint (`/wp-json/mcp/v1`). They appear alongside abilities from other plugins and are accessed through the default server's meta-tools (`discover-abilities`, `execute-ability`, `get-ability-schema`).
+- **Site MCP** (default) — GF abilities are registered on the shared WordPress MCP endpoint (`/wp-json/mcp/mcp-adapter-default-server`). They appear alongside abilities from other plugins and are accessed through the default server's meta-tools (`mcp-adapter-discover-abilities`, `mcp-adapter-execute-ability`, `mcp-adapter-get-ability-info`).
 - **Dedicated Endpoint** — GF registers its own MCP server at `/wp-json/mcp/gravityforms`. Each ability becomes a direct MCP tool (e.g., `gravityforms-forms-get` instead of going through `execute-ability`). GF abilities are hidden from the default server.
 
 **When using dedicated endpoint mode:**
 - Tool names use hyphen format: `gravityforms-forms-get`, `gravityforms-entries-search`, etc. (the `/` in ability names is converted to `-`)
-- Each tool has its own full JSON Schema — no need to call `get-ability-schema` first
+- Each tool has its own full JSON Schema — no need to call `mcp-adapter-get-ability-info` first
 - The MCP client must be configured to connect to the GF server endpoint separately
 - Both servers can coexist — the default server serves other plugins' abilities while GF serves its own
 
 **When using site MCP mode (default):**
-- All abilities accessed through the shared endpoint's `execute-ability` meta-tool
-- Tool name passed as a parameter: `execute-ability` with `{"ability": "gravityforms/forms-get", ...}`
+- All abilities accessed through the shared endpoint's `mcp-adapter-execute-ability` meta-tool
+- Tool name passed as a parameter: `mcp-adapter-execute-ability` with `{"ability": "gravityforms/forms-get", ...}`
 - This is the simpler setup — one MCP connection covers all plugins
 
 The agent does not need to know which mode is active — the MCP client handles routing. The same abilities are available in both modes; only the transport differs.
@@ -72,11 +74,16 @@ The agent does not need to know which mode is active — the MCP client handles 
 ### Creating a Form
 
 1. Call `system-field-types` — discover available types and capabilities
-2. Build form object with `title` and `fields` array
+2. Build form object with `title` and `fields` array — for `phone` fields, ALWAYS set `phoneFormat` explicitly (see the phone section below)
 3. **Include a `notifications` object** — `forms-create` does NOT auto-create a default admin notification (unlike the GF admin UI). Without one, submissions are saved but no email is sent.
 4. Call `forms-create` — returns `form_id` and `edit_url`
 
 Never guess field types. `system-field-types` returns `supports_choices`, `has_inputs`, `default_inputs`, and support flags for each type.
+
+**International phone field (Gravity Forms 3.0).** The `phone` field is still one type, but it has a `phoneFormat` setting with exactly three valid values: `"standard"` (US-masked plain string), `"international"` (unformatted plain string), or `"formatted"` (international UI, paired with a `defaultCountry` like `"us"`). The `system-field-types` phone entry reports the site's valid values as `format_options` — use those exact strings and never invent or abbreviate others; an unknown `phoneFormat` breaks form rendering. A **formatted** phone does NOT store a plain string — its value is a JSON object with the keys `country`, `national`, `formatted`, and `e164` (the `e164` value is validated against the E.164 standard). This changes how every entry-facing ability handles it:
+- **Creating the field** (`forms-create` / `forms-update`): ALWAYS set `phoneFormat` explicitly — `"standard"` for a US phone, `"formatted"` (plus `defaultCountry`) for international. Do not omit it: older Gravity Forms versions do not backfill an omitted format on API-created fields, which breaks form rendering.
+- **Reading** (`entries-get` / `entries-search`): a formatted phone comes back as that JSON object, not a plain number — parse it (use `e164` for the canonical number), don't treat it as a string.
+- **Writing / submitting** (`entries-update`, `submissions-submit`, `submissions-validate`): supply the JSON object with a valid `e164`, not a bare number, or validation fails. (`entries-create` is a raw insert, so match the same shape to keep the value usable.)
 
 **Default admin notification template:**
 ```json
@@ -106,7 +113,22 @@ Use `{admin_email}` for site admin, or a specific address. `{all_fields}` render
 2. Modify the returned fields array (add/remove/change)
 3. Call `forms-update` with the complete form object
 
-`notifications` and `confirmations` merge by key — safe for partial updates. `fields` does NOT merge.
+`notifications` and `confirmations` passed to `forms-update` merge by key — handy when standing up a whole form at once. For **targeted edits to a single notification or confirmation — including deletion — use the dedicated tools below**, not `forms-update` (they don't round-trip the whole form, so they can't drop fields). `fields` does NOT merge.
+
+### Notifications & Confirmations
+
+Notifications (emails) and confirmations (the message / page / redirect shown after submit) are keyed objects on the form. Edit them with the dedicated tools — the canonical path.
+
+**Always read before you write.** Call `notifications-list` / `confirmations-list` first to get the `id` of the item to change (the list carries the full objects; there is no separate "get one").
+
+- **Create** → `notifications-create` / `confirmations-create` with a settings object; the tool generates and returns the id.
+  - A notification needs `name`, `event` (e.g. `form_submission`), `to` (an email, or a field id / routing per `toType`), `subject`, and `message` (merge tags + HTML OK).
+  - A confirmation needs `name` and a `type`: `message` (needs `message`), `page` (needs `pageId`), or `redirect` (needs `url`).
+- **Update** → `notifications-update` / `confirmations-update` with the `notification_id` / `confirmation_id` and only the keys to change (partial merge; the id is immutable). The result must still satisfy the required fields above.
+- **Delete** → `notifications-delete` / `confirmations-delete` by id. The form's **default confirmation cannot be deleted** (edit it instead) — every form keeps one fallback.
+- **Route by condition** → add a `conditionalLogic` object (`{actionType, logicType, rules}`) so a notification sends — or a confirmation shows — only on matching submissions. For notifications `actionType: "show"` means "send when matched"; the default confirmation shows when none match. See [references/conditional-logic.md](references/conditional-logic.md).
+
+Common shapes: route different emails to clinicians vs patients (two notifications, each with `conditionalLogic` on a role/type field); show a tailored thank-you page per department (conditional confirmations + the default as fallback).
 
 ### Submitting a Form
 
@@ -328,6 +350,7 @@ For CL structure details, operators, and common patterns, see [references/condit
 | Fileupload field without `allowedExtensions`/`maxFileSize` | Accepts any file type/size — security risk | Always set `allowedExtensions` and `maxFileSize` — see field-config reference |
 | Creating a form without `notifications` | Submissions saved but no email sent — admin never notified | Always include a notification object — see "Creating a Form" workflow |
 | Creating a name field without `nameFormat: "advanced"` | First/Last sub-inputs render stacked vertically instead of side-by-side | Always set `"nameFormat": "advanced"` and `"size": "large"` on name fields — see field-config reference |
+| Creating a phone field without an explicit `phoneFormat` (or with an invented value) | On older GF versions the field fatals when rendered (form editor and frontend); format behavior is undefined | ALWAYS set `phoneFormat` explicitly to one of the values `system-field-types` reports in `format_options` (`"standard"`, `"international"`, `"formatted"`) — see field-config reference |
 | Passing multiselect values as comma-separated string | Data loss when values contain commas (e.g., "Atlanta, GA") | Always pass multiselect values as an **array**: `"input_1": ["Red", "Blue"]` — see field-config reference |
 | User asks to "create a form and add it to a page" | Cannot create WordPress pages/posts — only GF abilities exist | Create the form, then tell the user the shortcode `[gravityform id="X" title="true"]` to embed manually. Page/post creation is not currently available via the Abilities API. |
 | Ability not found (e.g., `forms-create`) | Site admin has not checked that specific tool (or Enable MCP is off) in MCP settings | Tell the user to enable the exact tool — and Enable MCP — in GF Settings → MCP. There is no blanket "write access" toggle; each tool is opted in individually. Do not attempt workarounds. |
