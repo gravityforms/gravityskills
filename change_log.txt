@@ -1,3 +1,6 @@
+### 1.1.1 | 2026-08-11
+- gravity-forms-abilities: Document productField auto-linking for quantity and option fields, and add the option field example to the pricing table.
+
 ### 1.1.0 | 2026-08-04
 - gravity-flow-abilities: Add the skill — workflow guidance for Gravity Flow abilities via the WordPress Abilities API (MCP), covering step CRUD, approval policies, reassignment, and feasibility consultation.
 - gravity-forms-abilities: Add a phone pitfall row and a phone step to the form-creation workflow; an omitted phoneFormat breaks rendering on older Gravity Forms versions.
