@@ -105,11 +105,14 @@ Pricing variants are NOT standalone field types. `system-field-types` intentiona
 | Hidden product | `{ "type": "product", "inputType": "hiddenproduct", "basePrice": "$9.00" }` |
 | Calculated price | `{ "type": "product", "inputType": "calculation", "calculationFormula": "{Qty:3} * 2" }` |
 | Quantity for a product | `{ "type": "quantity", "label": "Qty", "productField": 1 }` (`productField` = the product field's ID) |
+| Options for a product | `{ "type": "option", "label": "Add-ons", "productField": 1, "choices": [{ "text": "Gift wrap", "value": "Gift wrap", "price": "$5.00" }] }` |
 | Flat shipping | `{ "type": "shipping", "inputType": "singleshipping", "basePrice": "$5.00" }` |
 | Shipping options | `{ "type": "shipping", "inputType": "select", "choices": [{ "text": "Ground", "value": "Ground", "price": "$5.00" }] }` |
 | Order total | `{ "type": "total", "label": "Total" }` |
 
 The API applies the same defaults the editor would: bare `type: product` becomes `inputType: singleproduct`; single/hidden/calculation products get their `.1` (name) / `.2` (price) / `.3` (quantity) sub-inputs created automatically; choice-based product and shipping fields get `enablePrice` set (required — without it, priced submissions fail GF's anti-tampering state validation).
+
+`productField` on `quantity` and `option` fields: if omitted, current Gravity Forms links the field to the **nearest preceding product field** in the form. That is only safe on single-product forms — ALWAYS set `productField` explicitly when the form has more than one product.
 
 **Submitting pricing fields:**
 
