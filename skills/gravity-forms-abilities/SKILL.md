@@ -5,7 +5,7 @@ license: GPL-2.0+
 compatibility: Requires a WordPress site with Gravity Forms 2.9+ and the MCP endpoint enabled (GF Settings → MCP)
 metadata:
   author: gravityforms
-  version: "1.0.3"
+  version: "1.0.4"
 ---
 
 # Gravity Forms Abilities — Agent Skill
