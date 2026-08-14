@@ -311,7 +311,7 @@ When an agent is connected to multiple WordPress sites via separate MCP servers,
 
 The section above covers **separate WordPress installs**. A **WordPress multisite network** (one install, many subsites) behaves differently in specific ways:
 
-**Connection model:** Each subsite has its own REST root, so each subsite is its own MCP endpoint (e.g., `https://network.example/site-b/wp-json/mcp/gravityforms`). Configure **one MCP server per subsite URL**, not per install. `system-info`'s `site_url` / `site_name` identify the subsite, same as with separate installs.
+**Connection model:** Each subsite has its own REST root, so each subsite is its own MCP endpoint in **both** endpoint modes — Site MCP (`https://network.example/site-b/wp-json/mcp/mcp-adapter-default-server`) and Dedicated Endpoint (`https://network.example/site-b/wp-json/mcp/gravityforms`). Configure **one MCP server per subsite URL**, not per install. `system-info`'s `site_url` / `site_name` identify the subsite, same as with separate installs.
 
 **Per-subsite everything:** MCP enablement, the per-tool allowlist, and the endpoint mode are all configured per subsite — there is no network-level toggle. Two subsites on the same network can expose different tool sets, or none. If a tool works on subsite A but is missing on subsite B, that is per-subsite configuration, not an error: the admin must enable it in **that subsite's** GF Settings → MCP. Forms, entries, and feeds are stored per subsite; form IDs remain site-local (track `(site, form_id)` pairs).
 
