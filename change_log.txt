@@ -1,3 +1,6 @@
+### 1.1.2 | 2026-08-14
+- gravity-forms-abilities: Add a WordPress multisite section covering per-subsite endpoints and tool allowlists, per-subsite capabilities, HTML filtering for non-super-admin users, and network-inherited license info.
+
 ### 1.1.1 | 2026-08-11
 - gravity-forms-abilities: Document productField auto-linking for quantity and option fields, and add the option field example to the pricing table.
 

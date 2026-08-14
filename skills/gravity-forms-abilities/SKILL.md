@@ -5,7 +5,7 @@ license: GPL-2.0+
 compatibility: Requires a WordPress site with Gravity Forms 2.9+ and the MCP endpoint enabled (GF Settings → MCP)
 metadata:
   author: gravityforms
-  version: "1.0.4"
+  version: "1.0.5"
 ---
 
 # Gravity Forms Abilities — Agent Skill
@@ -306,6 +306,20 @@ When an agent is connected to multiple WordPress sites via separate MCP servers,
 5. Verify with `forms-get` on the new form
 
 **Important:** Field `id` values are preserved through `forms-create` — GFAPI honors the IDs you pass. This means merge tags in notifications (e.g., `{Email:3}`) continue to reference the correct fields. `nextFieldId` is auto-calculated.
+
+### WordPress Multisite Networks
+
+The section above covers **separate WordPress installs**. A **WordPress multisite network** (one install, many subsites) behaves differently in specific ways:
+
+**Connection model:** Each subsite has its own REST root, so each subsite is its own MCP endpoint (e.g., `https://network.example/site-b/wp-json/mcp/gravityforms`). Configure **one MCP server per subsite URL**, not per install. `system-info`'s `site_url` / `site_name` identify the subsite, same as with separate installs.
+
+**Per-subsite everything:** MCP enablement, the per-tool allowlist, and the endpoint mode are all configured per subsite — there is no network-level toggle. Two subsites on the same network can expose different tool sets, or none. If a tool works on subsite A but is missing on subsite B, that is per-subsite configuration, not an error: the admin must enable it in **that subsite's** GF Settings → MCP. Forms, entries, and feeds are stored per subsite; form IDs remain site-local (track `(site, form_id)` pairs).
+
+**Capabilities are per-subsite:** A user's credentials authenticate across the network, but their capabilities depend on their role **on each subsite**. Expect the same credential to succeed on one subsite and be permission-denied on another. Super admins pass capability checks on every subsite.
+
+**HTML in notifications/confirmations is filtered for most users:** On multisite, only super admins hold `unfiltered_html`. For everyone else, notification and confirmation messages are run through WordPress's HTML filter on save — `<style>` blocks, document-level tags (`<html>`, `<head>`, `<body>`), and non-whitelisted attributes are stripped. If a rich HTML email template loses markup on a multisite subsite, this is expected filtering, not a bug. Keep templates to body-level HTML, and tell the user why the markup changed.
+
+**License info may be network-inherited:** When Gravity Forms is network-activated, subsites without their own key inherit the network license, and the license field on subsites is locked ("managed by the administrator of this network"). `system-info`'s `is_licensed` / `license_type` on a subsite can reflect that inherited key. Never advise a subsite admin to update the license key — that is a network-admin action on the network's main site.
 
 ## Conditional Logic
 
