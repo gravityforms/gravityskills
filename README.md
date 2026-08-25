@@ -22,7 +22,9 @@ npx skills add gravityforms/gravityskills --skill gravity-forms-abilities
 
 ### GitHub Releases
 
-Download skill zips directly from [Releases](https://github.com/gravityforms/gravityskills/releases) and extract into your project's `.agents/skills/` directory.
+Download skill zips directly from [Releases](https://github.com/gravityforms/gravityskills/releases) and extract into your project's `.agents/skills/` directory (or other applicable directory, eg `.claude/skills`).
+
+In the case of the Claude desktop app, follow their [instructions](https://support.claude.com/en/articles/12512180-use-skills-in-claude). 
 
 ## Available Skills
 
@@ -30,7 +32,7 @@ Download skill zips directly from [Releases](https://github.com/gravityforms/gra
 
 Workflow guidance for AI agents using Gravity Forms abilities via the WordPress Abilities API (MCP). Covers form CRUD, entry management, submissions, feeds, notifications, conditional logic, and system queries. Provides critical sequencing rules, field configuration knowledge, and pitfall avoidance that tool schemas alone cannot express.
 
-**Requires:** WordPress site with Gravity Forms 2.9+ and MCP endpoint enabled (GF Settings → MCP).
+**Requires:** WordPress site with Gravity Forms 3.1+ and MCP endpoint enabled (GF Settings → MCP).
 
 ```bash
 npx skills add gravityforms/gravityskills --skill gravity-forms-abilities
@@ -39,38 +41,6 @@ npx skills add gravityforms/gravityskills --skill gravity-forms-abilities
 ## Usage
 
 Once installed, skills are automatically available to your AI coding agent. The agent reads the skill's `SKILL.md` when working on relevant tasks.
-
-**Examples:**
-
-```
-Help me build a Gravity Forms integration
-```
-
-```
-Review my form field implementation
-```
-
-## Skill Structure
-
-Each skill contains:
-
-- `SKILL.md` — Instructions for the agent (required)
-- `references/` — Supporting documentation (optional)
-- `scripts/` — Helper scripts for automation (optional)
-
-## Contributing
-
-Skills must follow the [Agent Skills spec](https://agentskills.io/):
-
-- **Name**: lowercase, hyphens only, 1–64 characters
-- **Directory name** must match the `name` field in `SKILL.md` frontmatter
-- **Frontmatter**: `name` and `description` fields required
-
-Run validation before submitting:
-
-```bash
-./scripts/validate-skills.sh
-```
 
 ## License
 
