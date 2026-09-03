@@ -83,6 +83,7 @@ Choice field types: `select`, `radio`, `checkbox`, `multiselect`, `image_choice`
 | `name` | Name | No | **Yes** | prefix/first/middle/last/suffix sub-inputs |
 | `address` | Address | No | **Yes** | street/city/state/zip/country sub-inputs |
 | `time` | Time | No | **Yes** | hour/minute/AM-PM sub-inputs |
+| `repeater` | Repeater | No | No | nested `fields` array for repeatable groups |
 | `hidden` | Hidden | No | No | not visible, good for tracking data |
 | `website` | Website | No | No | URL validation, conditional logic |
 | `fileupload` | File Upload | No | No | `allowedExtensions`, `maxFileSize`, `maxFiles` — see Type-Specific Config |
@@ -268,6 +269,71 @@ Example — GDPR consent checkbox:
 }
 ```
 The `is` operator does not work for individual multiselect values — it matches the entire stored string.
+
+### Repeater (`type: repeater`)
+
+Repeater fields contain child fields in a nested `fields` array. The child field definitions use the same shape as top-level fields.
+
+| Property | Type | Description |
+|---|---|---|
+| `fields` | array | Child field definitions. Required for a useful repeater. |
+| `maxItems` | integer | Maximum number of rows. Omit or use `0` for no explicit limit. |
+| `addButtonText` | string | Custom Add button text. |
+| `removeButtonText` | string | Custom Remove button text. |
+| `repeaterRowLabel` | string | Row label used in the UI, e.g. `Participant`. |
+| `showRepeaterRowLabel` | boolean | Whether row labels are visibly shown. |
+
+Rules:
+
+- Call `system-field-types` first and only use child field types with `repeatable: true`.
+- Child field IDs must be unique across the whole form, including top-level fields and all nested repeater children.
+- If child IDs are omitted, the abilities layer assigns globally unique IDs.
+- Nested repeaters are supported by using `type: "repeater"` inside another repeater's `fields` array.
+- Layout properties and deprecated Ready Class stripping work recursively on child fields.
+- Pricing child fields are scoped to their current repeater. A `quantity` or `option` child field links to a `product` child field in the same repeater scope, not an unrelated top-level product.
+
+Simple repeater example:
+
+```json
+{
+  "type": "repeater",
+  "label": "Participants",
+  "repeaterRowLabel": "Participant",
+  "maxItems": 4,
+  "fields": [
+    { "type": "text", "label": "Company" },
+    { "type": "name", "label": "Participant Name", "isRequired": true },
+    { "type": "email", "label": "Participant Email", "isRequired": true }
+  ]
+}
+```
+
+Nested repeater example:
+
+```json
+{
+  "type": "repeater",
+  "label": "Registrations",
+  "repeaterRowLabel": "Registration",
+  "fields": [
+    { "type": "name", "label": "Registrant", "isRequired": true },
+    {
+      "type": "repeater",
+      "label": "Guests",
+      "repeaterRowLabel": "Guest",
+      "fields": [
+        { "type": "text", "label": "Guest Name", "isRequired": true },
+        { "type": "select", "label": "Meal", "choices": [
+          { "text": "Standard", "value": "standard" },
+          { "text": "Vegetarian", "value": "vegetarian" }
+        ]}
+      ]
+    }
+  ]
+}
+```
+
+Repeater submission examples are in [entry-operations.md](entry-operations.md) §Repeater Submission Values.
 
 ## Form Design Patterns
 

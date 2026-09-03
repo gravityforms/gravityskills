@@ -5,6 +5,7 @@
 ### For `submissions-submit` (like a browser POST)
 
 Key format: `input_{field_id}` for simple fields, `input_{field_id}.{suffix}` for compound fields.
+`submissions-validate` uses the same `input_values` format.
 
 ```json
 {
@@ -48,6 +49,74 @@ Each checked choice is a separate input keyed by choice index (starting at 1):
 ```
 
 Only include checked values — omit unchecked choices entirely.
+
+### Repeater Submission Values
+
+Repeater rows are submitted as arrays on the child input names. Do not submit structured objects on the repeater field ID.
+
+For a repeater field `1` containing child text field `2`, two rows are submitted like this:
+
+```json
+{
+  "form_id": 1,
+  "input_values": {
+    "input_2": ["Alice", "Bob"]
+  }
+}
+```
+
+Gravity Forms stores that under the repeater field internally, but the ability input remains flattened by child input name:
+
+```json
+{
+  "1": [
+    { "2": "Alice" },
+    { "2": "Bob" }
+  ]
+}
+```
+
+Compound child fields use one array per sub-input. For a Name child field `2`, submit First and Last arrays with matching indexes:
+
+```json
+{
+  "form_id": 1,
+  "input_values": {
+    "input_2_3": ["Alice", "Bob"],
+    "input_2_6": ["Smith", "Jones"]
+  }
+}
+```
+
+This creates two repeater rows:
+
+```json
+[
+  { "2.3": "Alice", "2.6": "Smith" },
+  { "2.3": "Bob", "2.6": "Jones" }
+]
+```
+
+Nested repeater forms still use the same principle: submit values on child input names, not as nested row objects on the repeater field ID. Use `forms-get` to confirm assigned child field IDs before building the submission payload.
+
+Avoid these shapes:
+
+```json
+{
+  "input_1": [
+    { "2": "Alice" },
+    { "2": "Bob" }
+  ]
+}
+```
+
+```json
+{
+  "input_1": ["Alice", "Bob"]
+}
+```
+
+Use the first rejected shape only when working directly with raw stored entry data, not with `submissions-submit` or `submissions-validate`.
 
 ## Entry Search
 

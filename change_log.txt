@@ -1,3 +1,6 @@
+### 1.1.3
+- gravity-forms-abilities: Document repeater field creation, repeatable child-field discovery, and flattened child-array submission values.
+
 ### 1.1.2 | 2026-08-14
 - gravity-forms-abilities: Add a WordPress multisite section covering per-subsite endpoints and tool allowlists, per-subsite capabilities, HTML filtering for non-super-admin users, and network-inherited license info.
 
