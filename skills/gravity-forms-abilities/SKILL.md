@@ -78,7 +78,9 @@ The agent does not need to know which mode is active — the MCP client handles 
 3. **Include a `notifications` object** — `forms-create` does NOT auto-create a default admin notification (unlike the GF admin UI). Without one, submissions are saved but no email is sent.
 4. Call `forms-create` — returns `form_id` and `edit_url`
 
-Never guess field types. `system-field-types` returns `supports_choices`, `has_inputs`, `default_inputs`, and support flags for each type.
+Never guess field types. `system-field-types` returns `supports_choices`, `has_inputs`, `default_inputs`, `repeatable`, and support flags for each type. For `repeater`, it also reports `supports_nested_fields` and `nested_fields_property: "fields"`.
+
+**Repeater fields.** Create repeaters with `type: "repeater"` and put child field definitions in the repeater's nested `fields` array. Child field IDs must be unique across the whole form, not just inside the repeater. If you omit child IDs, the abilities layer assigns globally unique IDs. Only use child field types where `system-field-types` reports `repeatable: true`; non-repeatable fields such as `page`, `consent`, `fileupload`, and `shipping` are rejected inside repeaters. See [references/field-config.md](references/field-config.md) §Repeater for examples.
 
 **International phone field (Gravity Forms 3.0).** The `phone` field is still one type, but it has a `phoneFormat` setting with exactly three valid values: `"standard"` (US-masked plain string), `"international"` (unformatted plain string), or `"formatted"` (international UI, paired with a `defaultCountry` like `"us"`). The `system-field-types` phone entry reports the site's valid values as `format_options` — use those exact strings and never invent or abbreviate others; an unknown `phoneFormat` breaks form rendering. A **formatted** phone does NOT store a plain string — its value is a JSON object with the keys `country`, `national`, `formatted`, and `e164` (the `e164` value is validated against the E.164 standard). This changes how every entry-facing ability handles it:
 - **Creating the field** (`forms-create` / `forms-update`): ALWAYS set `phoneFormat` explicitly — `"standard"` for a US phone, `"formatted"` (plus `defaultCountry`) for international. Do not omit it: older Gravity Forms versions do not backfill an omitted format on API-created fields, which breaks form rendering.
@@ -142,6 +144,8 @@ For most compound fields (name, address), use dot-notation sub-input keys: `inpu
 **Time fields are the exception:** submit via underscore-style sibling keys that the bridge normalizes: `input_6_1`, `input_6_2`, `input_6_3` for Hour / Minute / AM-PM. This underscore format is specific to time fields only — all other compound fields use dot notation. Do not conclude a time field is broken until you've tested those three sub-inputs together on a clean form.
 
 For **multiselect fields**, pass values as an array: `"input_3": ["Red", "Blue"]`. Never use comma-separated strings — values containing commas cause data loss.
+
+For **repeater fields**, submit values on the child input names as arrays, not on the repeater field ID. Example: if repeater `1` contains child text field `2`, submit `"input_2": ["Alice", "Bob"]` for two rows. Compound child fields use one array per sub-input, e.g. `"input_3_3": ["Alice", "Bob"]` and `"input_3_6": ["Smith", "Jones"]` for a Name child field. See [references/entry-operations.md](references/entry-operations.md) §Repeater Submission Values for nested repeater examples.
 
 **`submissions-submit` vs `entries-create`:**
 - `submissions-submit` = full pipeline (validation → entry → notifications → feeds)
@@ -354,6 +358,8 @@ For CL structure details, operators, and common patterns, see [references/condit
 | Missing `choices` on select/radio/checkbox | Field renders empty | Check `supports_choices` from `system-field-types` |
 | Wrong input key format: `"1"` vs `"input_1"` | Silent data loss | `submissions-submit` uses `input_{id}`, `entries-create` uses `"{id}"` |
 | Compound field without sub-input suffixes | Data not captured | Use `default_inputs` from `system-field-types`; for time fields send Hour/Minute/AM-PM together |
+| Submitting repeater values on the repeater field ID | Rows are empty or validation fails | Submit arrays on child input names, e.g. `"input_2": ["Alice", "Bob"]`, not `"input_1"` |
+| Adding a non-repeatable field inside a repeater | `forms-create` / `forms-update` rejects the form | Check `repeatable: true` from `system-field-types` before adding a child field |
 | Not checking `is_valid` after submission | Miss validation failures | Always check response `is_valid` field |
 | Using `@example.com` emails in submissions | Rejected as spam by GF email field | Use realistic test domains (e.g., `@testmail.dev`) |
 | Passing `form_id` as top-level param on `forms-update` | Input validation error | Put form ID inside the `form` object as `id` |
@@ -378,6 +384,8 @@ For CL structure details, operators, and common patterns, see [references/condit
 **Choice fields** (`supports_choices: true`): `select`, `radio`, `checkbox`, `multiselect`, `image_choice` — require `choices: [{text, value}]` array. **Multiselect values must be submitted as arrays** (`"input_1": ["Red", "Blue"]`), not comma-separated strings.
 
 **Compound fields** (`has_inputs: true`): `name`, `address`, `time` — store values across sub-inputs with ID suffixes. Call `system-field-types` to see `default_inputs` for exact suffix mappings. **Name fields require `"nameFormat": "advanced"` and `"size": "large"`** — without these, sub-inputs render stacked instead of side-by-side.
+
+**Repeater fields**: `repeater` — use nested `fields` arrays to define repeatable child fields. Child field types must have `repeatable: true` in `system-field-types`. Submit row values as arrays on child input names, not on the repeater field ID. See [references/field-config.md](references/field-config.md) §Repeater and [references/entry-operations.md](references/entry-operations.md) §Repeater Submission Values.
 
 **File upload fields**: `fileupload` — configure `allowedExtensions` (comma-separated, no dots), `maxFileSize` (MB), `maxFiles`, `multipleFiles`. These properties are NOT returned by `system-field-types` — see [references/field-config.md](references/field-config.md) for full type-specific config reference. File upload fields can be configured via abilities, but actual file submission requires the rendered form (MCP cannot transport binary data).
 
