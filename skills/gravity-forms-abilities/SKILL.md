@@ -5,7 +5,7 @@ license: GPL-2.0+
 compatibility: Requires a WordPress site with Gravity Forms 2.9+ and the MCP endpoint enabled (GF Settings → MCP)
 metadata:
   author: gravityforms
-  version: "1.0.5"
+  version: "1.0.6"
 ---
 
 # Gravity Forms Abilities — Agent Skill
@@ -24,7 +24,7 @@ metadata:
 
 **Manage data** → `entries-search` (filter/paginate), `entries-get` (single entry), `entries-count` (efficient count), `entries-create` (raw insert, no validation), `entries-update`, `entries-delete` (trash by default; single by entry_id OR bulk by form_id + optional search_criteria; `force: true` for permanent)
 
-**Integrations** → `feeds-list`, `feeds-create`, `feeds-update`, `feeds-delete`
+**Integrations** → `feeds-list`, `feeds-create`, `feeds-update`, `feeds-delete`. Feeds of an add-on with its own abilities are protected: Gravity Flow workflow steps are feeds with `addon_slug` `gravityflow`, and they are not listed and cannot be created, updated or deleted here (`gf_ability_feed_protected`). Use the `gravityflow/steps-*` abilities for them.
 
 **Notifications** → `notifications-list`, `notifications-create` / `notifications-update` / `notifications-delete` (targeted config edits — the canonical path, NOT forms-update), `notifications-send` (re-send for an existing entry)
 
@@ -371,6 +371,7 @@ For CL structure details, operators, and common patterns, see [references/condit
 | `system-field-types` does not list rating/survey-style fields | The required add-on is not active on this site | Call `system-info` to check active add-ons; fall back to core fields (`radio`, `select`, `checkbox`) when add-on types are unavailable |
 | `entries-update` with only status/metadata | Older bridge versions could wipe omitted field values | Safest pattern is still fetch → merge → update when changing existing entries |
 | `entries-create` date field given in the wrong format | Searches may miss the entry later | Prefer the form's configured date format; ISO is only safe if the bridge explicitly normalizes it |
+| Managing Gravity Flow workflow steps with `feeds-*` | Refused with `gf_ability_feed_protected`; the steps are not in `feeds-list` | Use `gravityflow/steps-list`, `steps-get`, `steps-create`, `steps-update`, `steps-delete` |
 | "First/last name side by side" using a compound `name` field + layout grid | The `name` field already renders its sub-inputs (Prefix/First/Last/Suffix) in a row internally — adding `layoutGridColumnSpan` controls the whole block's width, not individual sub-inputs | When the user wants "first name and last name side by side," use **two separate `text` fields** with shared `layoutGroupId` and span `6`, not a single compound `name` field. Use the compound `name` field only when you want the full name widget (prefix/first/last/suffix). |
 
 ## Field Configuration Quick Reference
