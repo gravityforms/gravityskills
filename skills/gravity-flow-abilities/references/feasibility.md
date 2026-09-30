@@ -58,5 +58,5 @@ For large multi-workflow asks (e.g. "eight country-specific incorporation workfl
 ## Currently NOT possible via abilities
 
 - Creating WordPress pages/posts (inbox blocks, dashboards) — hand off to the human with exact instructions.
-- Creating/modifying step types outside the allowlist (approval, user_input, notification) — feed-addon and routing steps are configured in the Flow admin UI.
+- Creating/modifying step types outside the allowlist (approval, user_input, notification, choice_routing) — feed-addon and other routing steps are configured in the Flow admin UI.
 - Acting as an email assignee (no credential exists) — only delegated processing by a workflow admin.
