@@ -332,9 +332,11 @@ Conditional logic (CL) controls show/hide behavior of fields, notifications, con
 ### Analyzing Logic
 
 Call `forms-analyze-logic` instead of parsing raw CL from `forms-get`. It returns:
-- **`summary`** — rule counts across all locations
+- **`summary`** — rule counts across all locations, including `orphaned_rules`
 - **`dependency_map`** — reverse map showing what each source field controls (most useful view)
 - Per-location arrays: `field_logic`, `notification_logic`, `confirmation_logic`, `submit_button_logic`, `page_logic`
+
+**Orphaned rules.** A rule whose source field is not on the form (deleted, or never existed) carries `orphaned: true`, and so does its `dependency_map` entry; `summary.orphaned_rules` counts them. `forms-update` does not refuse to remove a field that drives logic (the editor only warns too), but it returns a `warnings` array naming the orphaned rules. Repair or remove them right away: a new field that reuses the id silently takes the rules over.
 
 ### Adding/Modifying Logic
 
