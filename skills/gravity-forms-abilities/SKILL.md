@@ -383,7 +383,7 @@ For CL structure details, operators, and common patterns, see [references/condit
 
 **Choice fields** (`supports_choices: true`): `select`, `radio`, `checkbox`, `multiselect`, `image_choice` — require `choices: [{text, value}]` array. **Multiselect values must be submitted as arrays** (`"input_1": ["Red", "Blue"]`), not comma-separated strings.
 
-**Compound fields** (`has_inputs: true`): `name`, `address`, `time` — store values across sub-inputs with ID suffixes. Call `system-field-types` to see `default_inputs` for exact suffix mappings. **Name fields require `"nameFormat": "advanced"` and `"size": "large"`** — without these, sub-inputs render stacked instead of side-by-side.
+**Compound fields** (`has_inputs: true`): `name`, `address`, `time`, `consent`, `product` (single product) and `checkbox` — store values across sub-inputs with ID suffixes. Call `system-field-types` to see `default_inputs` for exact suffix mappings; `checkbox` has `inputs_per_choice: true` (one sub-input per choice, `{field_id}.{n}`, n skips multiples of 10), and types whose inputs depend on configuration (`product`, `date`, `multi_choice`, `image_choice`) carry an `inputs_note`. **Name fields require `"nameFormat": "advanced"` and `"size": "large"`** — without these, sub-inputs render stacked instead of side-by-side.
 
 **File upload fields**: `fileupload` — configure `allowedExtensions` (comma-separated, no dots), `maxFileSize` (MB), `maxFiles`, `multipleFiles`. These properties are NOT returned by `system-field-types` — see [references/field-config.md](references/field-config.md) for full type-specific config reference. File upload fields can be configured via abilities, but actual file submission requires the rendered form (MCP cannot transport binary data).
 
