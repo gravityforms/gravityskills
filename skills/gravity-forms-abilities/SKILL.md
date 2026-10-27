@@ -75,7 +75,7 @@ The agent does not need to know which mode is active — the MCP client handles 
 
 1. Call `system-field-types` — discover available types and capabilities
 2. Build form object with `title` and `fields` array — for `phone` fields, ALWAYS set `phoneFormat` explicitly (see the phone section below)
-3. **Include a `notifications` object** — `forms-create` does NOT auto-create a default admin notification (unlike the GF admin UI). Without one, submissions are saved but no email is sent.
+3. Decide on notifications — when the form object has **no `notifications` key**, `forms-create` adds the editor's default Admin Notification (`{admin_email}`, `{all_fields}`), the same as the GF admin UI. Pass your own `notifications` object to replace it, or an explicit empty object `{}` for a form that sends no email.
 4. Call `forms-create` — returns `form_id` and `edit_url`
 
 Never guess field types. `system-field-types` returns `supports_choices`, `has_inputs`, `default_inputs`, and support flags for each type.
@@ -85,7 +85,7 @@ Never guess field types. `system-field-types` returns `supports_choices`, `has_i
 - **Reading** (`entries-get` / `entries-search`): a formatted phone comes back as that JSON object, not a plain number — parse it (use `e164` for the canonical number), don't treat it as a string.
 - **Writing / submitting** (`entries-update`, `submissions-submit`, `submissions-validate`): supply the JSON object with a valid `e164`, not a bare number, or validation fails. (`entries-create` is a raw insert, so match the same shape to keep the value usable.)
 
-**Default admin notification template:**
+**Admin notification template** (what `forms-create` adds by default; use it as the starting point for a custom one):
 ```json
 {
   "notifications": {
@@ -370,7 +370,7 @@ For CL structure details, operators, and common patterns, see [references/condit
 | Parsing raw CL from `forms-get` manually | Error-prone, misses notifications/confirmations/buttons | Use `forms-analyze-logic` instead |
 | Using `is_active: '0'` to pause a form | Form disappears entirely — page shows nothing | Use `scheduleForm` + `scheduleEnd` instead |
 | Fileupload field without `allowedExtensions`/`maxFileSize` | Accepts any file type/size — security risk | Always set `allowedExtensions` and `maxFileSize` — see field-config reference |
-| Creating a form without `notifications` | Submissions saved but no email sent — admin never notified | Always include a notification object — see "Creating a Form" workflow |
+| Passing `notifications: {}` on `forms-create` by habit | No email is ever sent for the form — the empty object opts out of the default Admin Notification | Omit the key to get the editor default, or pass a real notification object — see "Creating a Form" workflow |
 | Creating a name field without `nameFormat: "advanced"` | First/Last sub-inputs render stacked vertically instead of side-by-side | Always set `"nameFormat": "advanced"` and `"size": "large"` on name fields — see field-config reference |
 | Creating a phone field without an explicit `phoneFormat` (or with an invented value) | On older GF versions the field fatals when rendered (form editor and frontend); format behavior is undefined | ALWAYS set `phoneFormat` explicitly to one of the values `system-field-types` reports in `format_options` (`"standard"`, `"international"`, `"formatted"`) — see field-config reference |
 | Passing multiselect values as comma-separated string | Data loss when values contain commas (e.g., "Atlanta, GA") | Always pass multiselect values as an **array**: `"input_1": ["Red", "Blue"]` — see field-config reference |
