@@ -113,7 +113,11 @@ Use `{admin_email}` for site admin, or a specific address. `{all_fields}` render
 2. Modify the returned fields array (add/remove/change)
 3. Call `forms-update` with the complete form object
 
-`notifications` and `confirmations` passed to `forms-update` merge by key — handy when standing up a whole form at once. For **targeted edits to a single notification or confirmation — including deletion — use the dedicated tools below**, not `forms-update` (they don't round-trip the whole form, so they can't drop fields). `fields` does NOT merge.
+**Which fields exist is replaced; a field's properties are merged.** A submitted field whose `id` matches a stored field of the same `type` keeps every stored property you did not resend (`inputs`, `size`, `productField`, `validateState`, ...). Send a property as an empty value (`""`, `[]`) to clear it. A field with a changed `type` is a replacement and inherits nothing. Fields without an `id` are new.
+
+**Field IDs can be reused after a delete.** Like the form editor, Gravity Forms computes the next field ID from the highest ID currently on the form. Within one `forms-update` call new fields always get IDs above every stored ID, but if you remove the highest field in one call and add an ID-less field in a later call, the new field takes the old ID. Entry values and conditional-logic rules from the removed field then attach to the new one. To avoid it: remove and add in the same call, or give the new field an explicit `id` above the old maximum, and check `forms-analyze-logic` for rules that point at removed fields.
+
+`notifications` and `confirmations` passed to `forms-update` merge by key — handy when standing up a whole form at once. For **targeted edits to a single notification or confirmation — including deletion — use the dedicated tools below**, not `forms-update` (they don't round-trip the whole form, so they can't drop fields). The `fields` list itself does NOT merge: omitted fields are deleted.
 
 ### Notifications & Confirmations
 
