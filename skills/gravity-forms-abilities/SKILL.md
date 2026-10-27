@@ -147,6 +147,8 @@ For most compound fields (name, address), use dot-notation sub-input keys: `inpu
 
 For **multiselect fields**, pass values as an array: `"input_3": ["Red", "Blue"]`. Never use comma-separated strings — values containing commas cause data loss.
 
+**Dynamic population:** `field_values` is keyed by parameter name (a field's `inputName`, or a sub-input's `name`), e.g. `"field_values": {"promo": "SPRING26"}`. It fills fields that have `allowsPrepopulate: true` when `input_values` carries no value for them; an explicit `input_values` entry always wins. `submissions-validate` accepts it too.
+
 **`submissions-submit` vs `entries-create`:**
 - `submissions-submit` = full pipeline (validation → entry → notifications → feeds)
 - `entries-create` = raw DB insert, bypasses everything — use only for data migration
