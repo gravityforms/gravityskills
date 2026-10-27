@@ -24,7 +24,7 @@ metadata:
 
 **Manage data** → `entries-search` (filter/paginate), `entries-get` (single entry), `entries-count` (efficient count), `entries-create` (raw insert, no validation), `entries-update`, `entries-delete` (trash by default; single by entry_id OR bulk by form_id + optional search_criteria; `force: true` for permanent)
 
-**Integrations** → `feeds-list`, `feeds-create`, `feeds-update`, `feeds-delete`
+**Integrations** → `feeds-list`, `feeds-create` (new feeds start **inactive** unless `is_active: true`; review, then activate), `feeds-update` (pass only what changes: `feed_meta` replaces the stored meta, `is_active` pauses or resumes, `form_id` moves the feed), `feeds-delete`
 
 **Notifications** → `notifications-list`, `notifications-create` / `notifications-update` / `notifications-delete` (targeted config edits — the canonical path, NOT forms-update), `notifications-send` (re-send for an existing entry; returns `sent`, the active and matching notifications handed to the pipeline, which may be queued, plus `skipped` with a reason per id: `inactive`, `event`, `conditional_logic`, `not_found`)
 
