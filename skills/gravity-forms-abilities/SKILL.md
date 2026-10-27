@@ -26,7 +26,7 @@ metadata:
 
 **Integrations** → `feeds-list`, `feeds-create`, `feeds-update`, `feeds-delete`
 
-**Notifications** → `notifications-list`, `notifications-create` / `notifications-update` / `notifications-delete` (targeted config edits — the canonical path, NOT forms-update), `notifications-send` (re-send for an existing entry)
+**Notifications** → `notifications-list`, `notifications-create` / `notifications-update` / `notifications-delete` (targeted config edits — the canonical path, NOT forms-update), `notifications-send` (re-send for an existing entry; returns `sent`, the active and matching notifications handed to the pipeline, which may be queued, plus `skipped` with a reason per id: `inactive`, `event`, `conditional_logic`, `not_found`)
 
 **Confirmations** → `confirmations-list`, `confirmations-create` / `confirmations-update` / `confirmations-delete` (the message / page / redirect a submitter sees after submitting)
 
