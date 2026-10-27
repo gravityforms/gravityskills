@@ -406,3 +406,13 @@ For detailed field type tables, compound field suffix mappings, and form design 
 For entry search filters, input value formatting, and submission examples, see [references/entry-operations.md](references/entry-operations.md).
 
 For conditional logic structure, operators, dependency maps, and CL modification patterns, see [references/conditional-logic.md](references/conditional-logic.md).
+
+## API Conventions
+
+- **IDs.** Form, entry and feed ids are integers. Notification and confirmation ids are strings (generated hex, or the key you supplied). Field ids are integers on the form and strings inside conditional logic rules.
+- **Not found.** Every ability answers a missing form, entry, feed, notification or confirmation with the error code `gf_ability_not_found`, including the list calls when you name a specific form or entry (`entries-search` with `form_ids`, `feeds-list` with `form_id`, `notes-list`). An empty list means the record exists and has nothing in it.
+- **Counts.** `entries-count` returns `count` for one form and `total` plus per-form `counts` for several; `entries-search` returns `total_count` beside the page of entries. The keys differ by shape on purpose and will not be renamed.
+- **Errors are plain text.** Schedule, entry-limit and other pipeline messages arrive without HTML.
+- **Permanent deletes echo the id.** `forms-delete` (title), `entries-delete`, `feeds-delete`, `notifications-delete` and `confirmations-delete` all take a `confirmation` that repeats the identifier; bulk entry deletes use the `DELETE {count} ENTRIES FROM FORM {form_id}` phrase.
+- **Annotations.** Read-only tools carry `readonly: true` (including `submissions-validate`). Creates, sends and submits are writes but not `destructive`; updates and deletes are `destructive`.
+- **Warnings.** `forms-create`, `forms-update`, `entries-create` and `entries-update` may return a `warnings` array for things saved differently than asked. Treat each entry as an action item.
