@@ -126,8 +126,8 @@ Notifications (emails) and confirmations (the message / page / redirect shown af
 **Always read before you write.** Call `notifications-list` / `confirmations-list` first to get the `id` of the item to change (the list carries the full objects; there is no separate "get one").
 
 - **Create** → `notifications-create` / `confirmations-create` with a settings object; the tool generates and returns the id.
-  - A notification needs `name`, `event` (e.g. `form_submission`), `to` (an email, or a field id / routing per `toType`), `subject`, and `message` (merge tags + HTML OK).
-  - A confirmation needs `name` and a `type`: `message` (needs `message`), `page` (needs `pageId`), or `redirect` (needs `url`).
+  - A notification needs `name`, `event` (e.g. `form_submission`), a recipient, `subject`, and `message` (merge tags + HTML OK). The recipient is `to` (an email for `toType: email`, a field id for `toType: field`) or, for `toType: routing`, a non-empty `routing` array of `{fieldId, operator, value, email}` rules with no `to` at all; every matching rule's `email` receives the notification.
+  - A confirmation needs `name` and a `type`: `message` (needs `message`), `page` (needs `pageId` of a **published** page; drafts and missing ids are rejected), or `redirect` (needs `url`).
 - **Update** → `notifications-update` / `confirmations-update` with the `notification_id` / `confirmation_id` and only the keys to change (partial merge; the id is immutable). The result must still satisfy the required fields above.
 - **Delete** → `notifications-delete` / `confirmations-delete` by id, echoing the same id back as `confirmation` (the delete is permanent, like every other permanent delete). The form's **default confirmation cannot be deleted** (edit it instead) — every form keeps one fallback.
 - **Route by condition** → add a `conditionalLogic` object (`{actionType, logicType, rules}`) so a notification sends — or a confirmation shows — only on matching submissions. For notifications `actionType: "show"` means "send when matched"; the default confirmation shows when none match. See [references/conditional-logic.md](references/conditional-logic.md).
