@@ -129,7 +129,7 @@ Notifications (emails) and confirmations (the message / page / redirect shown af
   - A notification needs `name`, `event` (e.g. `form_submission`), `to` (an email, or a field id / routing per `toType`), `subject`, and `message` (merge tags + HTML OK).
   - A confirmation needs `name` and a `type`: `message` (needs `message`), `page` (needs `pageId`), or `redirect` (needs `url`).
 - **Update** → `notifications-update` / `confirmations-update` with the `notification_id` / `confirmation_id` and only the keys to change (partial merge; the id is immutable). The result must still satisfy the required fields above.
-- **Delete** → `notifications-delete` / `confirmations-delete` by id. The form's **default confirmation cannot be deleted** (edit it instead) — every form keeps one fallback.
+- **Delete** → `notifications-delete` / `confirmations-delete` by id, echoing the same id back as `confirmation` (the delete is permanent, like every other permanent delete). The form's **default confirmation cannot be deleted** (edit it instead) — every form keeps one fallback.
 - **Route by condition** → add a `conditionalLogic` object (`{actionType, logicType, rules}`) so a notification sends — or a confirmation shows — only on matching submissions. For notifications `actionType: "show"` means "send when matched"; the default confirmation shows when none match. See [references/conditional-logic.md](references/conditional-logic.md).
 
 Common shapes: route different emails to clinicians vs patients (two notifications, each with `conditionalLogic` on a role/type field); show a tailored thank-you page per department (conditional confirmations + the default as fallback).
