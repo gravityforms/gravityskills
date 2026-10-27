@@ -127,6 +127,8 @@ For large result sets:
 
 `entries-delete` supports bulk mode — pass `form_id` instead of `entry_id` to delete all entries for a form server-side.
 
+Passing both `entry_id` and `form_id` is a single delete with a safety check: the entry must belong to that form, or the call is rejected with `gf_ability_form_entry_mismatch` and nothing is deleted. Use the pair when you know the form, so a mixed-up ID can never delete an entry elsewhere.
+
 ### Delete all entries for one form
 
 ```json
