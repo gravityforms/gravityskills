@@ -76,7 +76,7 @@ The agent does not need to know which mode is active — the MCP client handles 
 1. Call `system-field-types` — discover available types and capabilities
 2. Build form object with `title` and `fields` array — for `phone` fields, ALWAYS set `phoneFormat` explicitly (see the phone section below)
 3. Decide on notifications — when the form object has **no `notifications` key**, `forms-create` adds the editor's default Admin Notification (`{admin_email}`, `{all_fields}`), the same as the GF admin UI. Pass your own `notifications` object to replace it, or an explicit empty object `{}` for a form that sends no email.
-4. Call `forms-create` — returns `form_id` and `edit_url`
+4. Call `forms-create` — returns `form_id`, `edit_url` and, when something was saved differently than asked, a `warnings` array (a title already in use is saved with a " (n)" suffix; a layout row over 12 columns wraps). Read and act on every warning; `forms-update` returns the same key.
 
 Never guess field types. `system-field-types` returns `supports_choices`, `has_inputs`, `default_inputs`, and support flags for each type.
 
@@ -393,7 +393,7 @@ For CL structure details, operators, and common patterns, see [references/condit
 
 **Layout fields** (no data): `html`, `section`, `page` — visual only, do not collect submissions.
 
-**Layout grid**: Control field width and row grouping with `layoutGridColumnSpan` (1–12, default full width) and `layoutGroupId` (any string — fields sharing the same value render on the same row). See [references/field-config.md](references/field-config.md) §Layout Grid for patterns and natural language mapping.
+**Layout grid**: Control field width and row grouping with `layoutGridColumnSpan` (1–12, default full width) and `layoutGroupId` (any string — fields sharing the same value render on the same row). Keep each row's spans at 12 or less; a row that adds up to more saves but wraps, and the write returns a `warnings` entry naming the row. See [references/field-config.md](references/field-config.md) §Layout Grid for patterns and natural language mapping.
 
 **Pricing fields**: `product`, `option`, `quantity`, `shipping`, `total`. Product variants (single product, dropdown, calculation, hidden, user-defined price) are set via `inputType` on a `product` field — never as standalone types (`singleproduct`, `calculation`, etc. are not valid `type` values and are excluded from `system-field-types`). Choice-based products submit `value|price` (e.g. `"input_2": "Pro|30"` for a $30.00 choice). See [references/field-config.md](references/field-config.md) §Pricing Fields for the full pattern table and submission formats.
 
