@@ -147,6 +147,8 @@ For most compound fields (name, address), use dot-notation sub-input keys: `inpu
 
 For **multiselect fields**, pass values as an array: `"input_3": ["Red", "Blue"]`. Never use comma-separated strings — values containing commas cause data loss.
 
+**Form state and anti-spam:** an inactive form answers `gf_ability_form_inactive` and a trashed form `gf_ability_form_trashed`; schedule and entry-limit blocks come back as plain-text errors. The honeypot still runs for API submissions, but the submit speed check (`enableSubmitSpeedCheck`) cannot: no page was rendered, so there is no timing to compare. File upload fields cannot receive a value (see Field Configuration).
+
 **Dynamic population:** `field_values` is keyed by parameter name (a field's `inputName`, or a sub-input's `name`), e.g. `"field_values": {"promo": "SPRING26"}`. It fills fields that have `allowsPrepopulate: true` when `input_values` carries no value for them; an explicit `input_values` entry always wins. `submissions-validate` accepts it too.
 
 **`submissions-submit` vs `entries-create`:**
@@ -387,7 +389,7 @@ For CL structure details, operators, and common patterns, see [references/condit
 
 **Compound fields** (`has_inputs: true`): `name`, `address`, `time`, `consent`, `product` (single product) and `checkbox` — store values across sub-inputs with ID suffixes. Call `system-field-types` to see `default_inputs` for exact suffix mappings; `checkbox` has `inputs_per_choice: true` (one sub-input per choice, `{field_id}.{n}`, n skips multiples of 10), and types whose inputs depend on configuration (`product`, `date`, `multi_choice`, `image_choice`) carry an `inputs_note`. **Name fields require `"nameFormat": "advanced"` and `"size": "large"`** — without these, sub-inputs render stacked instead of side-by-side.
 
-**File upload fields**: `fileupload` — configure `allowedExtensions` (comma-separated, no dots), `maxFileSize` (MB), `maxFiles`, `multipleFiles`. These properties are NOT returned by `system-field-types` — see [references/field-config.md](references/field-config.md) for full type-specific config reference. File upload fields can be configured via abilities, but actual file submission requires the rendered form (MCP cannot transport binary data).
+**File upload fields**: `fileupload` — configure `allowedExtensions` (comma-separated, no dots), `maxFileSize` (MB), `maxFiles`, `multipleFiles`. These properties are NOT returned by `system-field-types` — see [references/field-config.md](references/field-config.md) for full type-specific config reference. File upload fields can be configured via abilities, but actual file submission requires the rendered form (MCP cannot transport binary data). `submissions-submit` and `submissions-validate` refuse any non-empty value for a file upload field with `gf_ability_unsupported_input`; leave the field out.
 
 **Consent fields**: `consent` — GDPR-style checkbox with `checkboxLabel` (the agreement text next to the checkbox) and `description` (longer explanatory text below). Always set `isRequired: true` for GDPR compliance. See [references/field-config.md](references/field-config.md) for examples.
 
