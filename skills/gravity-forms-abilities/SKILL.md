@@ -113,7 +113,7 @@ Use `{admin_email}` for site admin, or a specific address. `{all_fields}` render
 2. Modify the returned fields array (add/remove/change)
 3. Call `forms-update` with the complete form object
 
-**Which fields exist is replaced; a field's properties are merged.** A submitted field whose `id` matches a stored field of the same `type` keeps every stored property you did not resend (`inputs`, `size`, `productField`, `validateState`, ...). Send a property as an empty value (`""`, `[]`) to clear it. A field with a changed `type` is a replacement and inherits nothing. Fields without an `id` are new.
+**Which fields exist is replaced; a field's properties are merged.** A submitted field whose `id` matches a stored field of the same `type` keeps every stored property you did not resend (`inputs`, `size`, `productField`, `validateState`, ...). Send a property as an empty value (`""`, `[]`) to clear it. A field with a changed `type` or `inputType` is a replacement: it inherits nothing and gets the editor defaults for its new shape (a Single Product changed to a Drop Down loses its Name/Price/Quantity `inputs`). Fields without an `id` are new.
 
 **Field IDs can be reused after a delete.** Like the form editor, Gravity Forms computes the next field ID from the highest ID currently on the form. Within one `forms-update` call new fields always get IDs above every stored ID, but if you remove the highest field in one call and add an ID-less field in a later call, the new field takes the old ID. Entry values and conditional-logic rules from the removed field then attach to the new one. To avoid it: remove and add in the same call, or give the new field an explicit `id` above the old maximum, and check `forms-analyze-logic` for rules that point at removed fields.
 
