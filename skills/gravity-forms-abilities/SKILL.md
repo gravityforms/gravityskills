@@ -24,9 +24,9 @@ metadata:
 
 **Manage data** → `entries-search` (filter/paginate), `entries-get` (single entry), `entries-count` (efficient count), `entries-create` (raw insert, no validation), `entries-update`, `entries-delete` (trash by default; single by entry_id OR bulk by form_id + optional search_criteria; `force: true` for permanent)
 
-**Integrations** → `feeds-list`, `feeds-create`, `feeds-update`, `feeds-delete`
+**Integrations** → `feeds-list`, `feeds-create` (new feeds start **inactive** unless `is_active: true`; review, then activate), `feeds-update` (pass only what changes: `feed_meta` replaces the stored meta, `is_active` pauses or resumes, `form_id` moves the feed), `feeds-delete`
 
-**Notifications** → `notifications-list`, `notifications-create` / `notifications-update` / `notifications-delete` (targeted config edits — the canonical path, NOT forms-update), `notifications-send` (re-send for an existing entry)
+**Notifications** → `notifications-list`, `notifications-create` / `notifications-update` / `notifications-delete` (targeted config edits — the canonical path, NOT forms-update), `notifications-send` (re-send for an existing entry; returns `sent`, the active and matching notifications handed to the pipeline, which may be queued, plus `skipped` with a reason per id: `inactive`, `event`, `conditional_logic`, `not_found`)
 
 **Confirmations** → `confirmations-list`, `confirmations-create` / `confirmations-update` / `confirmations-delete` (the message / page / redirect a submitter sees after submitting)
 
@@ -75,8 +75,8 @@ The agent does not need to know which mode is active — the MCP client handles 
 
 1. Call `system-field-types` — discover available types and capabilities
 2. Build form object with `title` and `fields` array — for `phone` fields, ALWAYS set `phoneFormat` explicitly (see the phone section below)
-3. **Include a `notifications` object** — `forms-create` does NOT auto-create a default admin notification (unlike the GF admin UI). Without one, submissions are saved but no email is sent.
-4. Call `forms-create` — returns `form_id` and `edit_url`
+3. Decide on notifications — when the form object has **no `notifications` key**, `forms-create` adds the editor's default Admin Notification (`{admin_email}`, `{all_fields}`), the same as the GF admin UI. Pass your own `notifications` object to replace it, or an explicit empty object `{}` for a form that sends no email.
+4. Call `forms-create` — returns `form_id`, `edit_url` and, when something was saved differently than asked, a `warnings` array (a title already in use is saved with a " (n)" suffix; a layout row over 12 columns wraps). Read and act on every warning; `forms-update` returns the same key.
 
 Never guess field types. `system-field-types` returns `supports_choices`, `has_inputs`, `default_inputs`, and support flags for each type.
 
@@ -85,7 +85,7 @@ Never guess field types. `system-field-types` returns `supports_choices`, `has_i
 - **Reading** (`entries-get` / `entries-search`): a formatted phone comes back as that JSON object, not a plain number — parse it (use `e164` for the canonical number), don't treat it as a string.
 - **Writing / submitting** (`entries-update`, `submissions-submit`, `submissions-validate`): supply the JSON object with a valid `e164`, not a bare number, or validation fails. (`entries-create` is a raw insert, so match the same shape to keep the value usable.)
 
-**Default admin notification template:**
+**Admin notification template** (what `forms-create` adds by default; use it as the starting point for a custom one):
 ```json
 {
   "notifications": {
@@ -113,7 +113,11 @@ Use `{admin_email}` for site admin, or a specific address. `{all_fields}` render
 2. Modify the returned fields array (add/remove/change)
 3. Call `forms-update` with the complete form object
 
-`notifications` and `confirmations` passed to `forms-update` merge by key — handy when standing up a whole form at once. For **targeted edits to a single notification or confirmation — including deletion — use the dedicated tools below**, not `forms-update` (they don't round-trip the whole form, so they can't drop fields). `fields` does NOT merge.
+**Which fields exist is replaced; a field's properties are merged.** A submitted field whose `id` matches a stored field of the same `type` keeps every stored property you did not resend (`inputs`, `size`, `productField`, `validateState`, ...). Send a property as an empty value (`""`, `[]`) to clear it. A field with a changed `type` or `inputType` is a replacement: it inherits nothing and gets the editor defaults for its new shape (a Single Product changed to a Drop Down loses its Name/Price/Quantity `inputs`). Fields without an `id` are new.
+
+**Field IDs can be reused after a delete.** Like the form editor, Gravity Forms computes the next field ID from the highest ID currently on the form. Within one `forms-update` call new fields always get IDs above every stored ID, but if you remove the highest field in one call and add an ID-less field in a later call, the new field takes the old ID. Entry values and conditional-logic rules from the removed field then attach to the new one. To avoid it: remove and add in the same call, or give the new field an explicit `id` above the old maximum, and check `forms-analyze-logic` for rules that point at removed fields.
+
+`notifications` and `confirmations` passed to `forms-update` merge by key — handy when standing up a whole form at once. For **targeted edits to a single notification or confirmation — including deletion — use the dedicated tools below**, not `forms-update` (they don't round-trip the whole form, so they can't drop fields). The `fields` list itself does NOT merge: omitted fields are deleted.
 
 ### Notifications & Confirmations
 
@@ -122,10 +126,10 @@ Notifications (emails) and confirmations (the message / page / redirect shown af
 **Always read before you write.** Call `notifications-list` / `confirmations-list` first to get the `id` of the item to change (the list carries the full objects; there is no separate "get one").
 
 - **Create** → `notifications-create` / `confirmations-create` with a settings object; the tool generates and returns the id.
-  - A notification needs `name`, `event` (e.g. `form_submission`), `to` (an email, or a field id / routing per `toType`), `subject`, and `message` (merge tags + HTML OK).
-  - A confirmation needs `name` and a `type`: `message` (needs `message`), `page` (needs `pageId`), or `redirect` (needs `url`).
+  - A notification needs `name`, `event` (e.g. `form_submission`), a recipient, `subject`, and `message` (merge tags + HTML OK). The recipient is `to` (an email for `toType: email`, a field id for `toType: field`) or, for `toType: routing`, a non-empty `routing` array of `{fieldId, operator, value, email}` rules with no `to` at all; every matching rule's `email` receives the notification.
+  - A confirmation needs `name` and a `type`: `message` (needs `message`), `page` (needs `pageId` of a **published** page; drafts and missing ids are rejected), or `redirect` (needs `url`).
 - **Update** → `notifications-update` / `confirmations-update` with the `notification_id` / `confirmation_id` and only the keys to change (partial merge; the id is immutable). The result must still satisfy the required fields above.
-- **Delete** → `notifications-delete` / `confirmations-delete` by id. The form's **default confirmation cannot be deleted** (edit it instead) — every form keeps one fallback.
+- **Delete** → `notifications-delete` / `confirmations-delete` by id, echoing the same id back as `confirmation` (the delete is permanent, like every other permanent delete). The form's **default confirmation cannot be deleted** (edit it instead) — every form keeps one fallback.
 - **Route by condition** → add a `conditionalLogic` object (`{actionType, logicType, rules}`) so a notification sends — or a confirmation shows — only on matching submissions. For notifications `actionType: "show"` means "send when matched"; the default confirmation shows when none match. See [references/conditional-logic.md](references/conditional-logic.md).
 
 Common shapes: route different emails to clinicians vs patients (two notifications, each with `conditionalLogic` on a role/type field); show a tailored thank-you page per department (conditional confirmations + the default as fallback).
@@ -142,6 +146,10 @@ For most compound fields (name, address), use dot-notation sub-input keys: `inpu
 **Time fields are the exception:** submit via underscore-style sibling keys that the bridge normalizes: `input_6_1`, `input_6_2`, `input_6_3` for Hour / Minute / AM-PM. This underscore format is specific to time fields only — all other compound fields use dot notation. Do not conclude a time field is broken until you've tested those three sub-inputs together on a clean form.
 
 For **multiselect fields**, pass values as an array: `"input_3": ["Red", "Blue"]`. Never use comma-separated strings — values containing commas cause data loss.
+
+**Form state and anti-spam:** an inactive form answers `gf_ability_form_inactive` and a trashed form `gf_ability_form_trashed`; schedule and entry-limit blocks come back as plain-text errors. The honeypot still runs for API submissions, but the submit speed check (`enableSubmitSpeedCheck`) cannot: no page was rendered, so there is no timing to compare. File upload fields cannot receive a value (see Field Configuration).
+
+**Dynamic population:** `field_values` is keyed by parameter name (a field's `inputName`, or a sub-input's `name`), e.g. `"field_values": {"promo": "SPRING26"}`. It fills fields that have `allowsPrepopulate: true` when `input_values` carries no value for them; an explicit `input_values` entry always wins. `submissions-validate` accepts it too.
 
 **`submissions-submit` vs `entries-create`:**
 - `submissions-submit` = full pipeline (validation → entry → notifications → feeds)
@@ -328,9 +336,11 @@ Conditional logic (CL) controls show/hide behavior of fields, notifications, con
 ### Analyzing Logic
 
 Call `forms-analyze-logic` instead of parsing raw CL from `forms-get`. It returns:
-- **`summary`** — rule counts across all locations
+- **`summary`** — rule counts across all locations, including `orphaned_rules`
 - **`dependency_map`** — reverse map showing what each source field controls (most useful view)
 - Per-location arrays: `field_logic`, `notification_logic`, `confirmation_logic`, `submit_button_logic`, `page_logic`
+
+**Orphaned rules.** A rule whose source field is not on the form (deleted, or never existed) carries `orphaned: true`, and so does its `dependency_map` entry; `summary.orphaned_rules` counts them. `forms-update` does not refuse to remove a field that drives logic (the editor only warns too), but it returns a `warnings` array naming the orphaned rules. Repair or remove them right away: a new field that reuses the id silently takes the rules over.
 
 ### Adding/Modifying Logic
 
@@ -362,7 +372,7 @@ For CL structure details, operators, and common patterns, see [references/condit
 | Parsing raw CL from `forms-get` manually | Error-prone, misses notifications/confirmations/buttons | Use `forms-analyze-logic` instead |
 | Using `is_active: '0'` to pause a form | Form disappears entirely — page shows nothing | Use `scheduleForm` + `scheduleEnd` instead |
 | Fileupload field without `allowedExtensions`/`maxFileSize` | Accepts any file type/size — security risk | Always set `allowedExtensions` and `maxFileSize` — see field-config reference |
-| Creating a form without `notifications` | Submissions saved but no email sent — admin never notified | Always include a notification object — see "Creating a Form" workflow |
+| Passing `notifications: {}` on `forms-create` by habit | No email is ever sent for the form — the empty object opts out of the default Admin Notification | Omit the key to get the editor default, or pass a real notification object — see "Creating a Form" workflow |
 | Creating a name field without `nameFormat: "advanced"` | First/Last sub-inputs render stacked vertically instead of side-by-side | Always set `"nameFormat": "advanced"` and `"size": "large"` on name fields — see field-config reference |
 | Creating a phone field without an explicit `phoneFormat` (or with an invented value) | On older GF versions the field fatals when rendered (form editor and frontend); format behavior is undefined | ALWAYS set `phoneFormat` explicitly to one of the values `system-field-types` reports in `format_options` (`"standard"`, `"international"`, `"formatted"`) — see field-config reference |
 | Passing multiselect values as comma-separated string | Data loss when values contain commas (e.g., "Atlanta, GA") | Always pass multiselect values as an **array**: `"input_1": ["Red", "Blue"]` — see field-config reference |
@@ -377,15 +387,15 @@ For CL structure details, operators, and common patterns, see [references/condit
 
 **Choice fields** (`supports_choices: true`): `select`, `radio`, `checkbox`, `multiselect`, `image_choice` — require `choices: [{text, value}]` array. **Multiselect values must be submitted as arrays** (`"input_1": ["Red", "Blue"]`), not comma-separated strings.
 
-**Compound fields** (`has_inputs: true`): `name`, `address`, `time` — store values across sub-inputs with ID suffixes. Call `system-field-types` to see `default_inputs` for exact suffix mappings. **Name fields require `"nameFormat": "advanced"` and `"size": "large"`** — without these, sub-inputs render stacked instead of side-by-side.
+**Compound fields** (`has_inputs: true`): `name`, `address`, `time`, `consent`, `product` (single product) and `checkbox` — store values across sub-inputs with ID suffixes. Call `system-field-types` to see `default_inputs` for exact suffix mappings; `checkbox` has `inputs_per_choice: true` (one sub-input per choice, `{field_id}.{n}`, n skips multiples of 10), and types whose inputs depend on configuration (`product`, `date`, `multi_choice`, `image_choice`) carry an `inputs_note`. **Name fields require `"nameFormat": "advanced"` and `"size": "large"`** — without these, sub-inputs render stacked instead of side-by-side.
 
-**File upload fields**: `fileupload` — configure `allowedExtensions` (comma-separated, no dots), `maxFileSize` (MB), `maxFiles`, `multipleFiles`. These properties are NOT returned by `system-field-types` — see [references/field-config.md](references/field-config.md) for full type-specific config reference. File upload fields can be configured via abilities, but actual file submission requires the rendered form (MCP cannot transport binary data).
+**File upload fields**: `fileupload` — configure `allowedExtensions` (comma-separated, no dots), `maxFileSize` (MB), `maxFiles`, `multipleFiles`. These properties are NOT returned by `system-field-types` — see [references/field-config.md](references/field-config.md) for full type-specific config reference. File upload fields can be configured via abilities, but actual file submission requires the rendered form (MCP cannot transport binary data). `submissions-submit` and `submissions-validate` refuse any non-empty value for a file upload field with `gf_ability_unsupported_input`; leave the field out.
 
 **Consent fields**: `consent` — GDPR-style checkbox with `checkboxLabel` (the agreement text next to the checkbox) and `description` (longer explanatory text below). Always set `isRequired: true` for GDPR compliance. See [references/field-config.md](references/field-config.md) for examples.
 
 **Layout fields** (no data): `html`, `section`, `page` — visual only, do not collect submissions.
 
-**Layout grid**: Control field width and row grouping with `layoutGridColumnSpan` (1–12, default full width) and `layoutGroupId` (any string — fields sharing the same value render on the same row). See [references/field-config.md](references/field-config.md) §Layout Grid for patterns and natural language mapping.
+**Layout grid**: Control field width and row grouping with `layoutGridColumnSpan` (1–12, default full width) and `layoutGroupId` (any string — fields sharing the same value render on the same row). Keep each row's spans at 12 or less; a row that adds up to more saves but wraps, and the write returns a `warnings` entry naming the row. See [references/field-config.md](references/field-config.md) §Layout Grid for patterns and natural language mapping.
 
 **Pricing fields**: `product`, `option`, `quantity`, `shipping`, `total`. Product variants (single product, dropdown, calculation, hidden, user-defined price) are set via `inputType` on a `product` field — never as standalone types (`singleproduct`, `calculation`, etc. are not valid `type` values and are excluded from `system-field-types`). Choice-based products submit `value|price` (e.g. `"input_2": "Pro|30"` for a $30.00 choice). See [references/field-config.md](references/field-config.md) §Pricing Fields for the full pattern table and submission formats.
 
@@ -396,3 +406,13 @@ For detailed field type tables, compound field suffix mappings, and form design 
 For entry search filters, input value formatting, and submission examples, see [references/entry-operations.md](references/entry-operations.md).
 
 For conditional logic structure, operators, dependency maps, and CL modification patterns, see [references/conditional-logic.md](references/conditional-logic.md).
+
+## API Conventions
+
+- **IDs.** Form, entry and feed ids are integers. Notification and confirmation ids are strings (generated hex, or the key you supplied). Field ids are integers on the form and strings inside conditional logic rules.
+- **Not found.** Every ability answers a missing form, entry, feed, notification or confirmation with the error code `gf_ability_not_found`, including the list calls when you name a specific form or entry (`entries-search` with `form_ids`, `feeds-list` with `form_id`, `notes-list`). An empty list means the record exists and has nothing in it.
+- **Counts.** `entries-count` returns `count` for one form and `total` plus per-form `counts` for several; `entries-search` returns `total_count` beside the page of entries. The keys differ by shape on purpose and will not be renamed.
+- **Errors are plain text.** Schedule, entry-limit and other pipeline messages arrive without HTML.
+- **Permanent deletes echo the id.** `forms-delete` (title), `entries-delete`, `feeds-delete`, `notifications-delete` and `confirmations-delete` all take a `confirmation` that repeats the identifier; bulk entry deletes use the `DELETE {count} ENTRIES FROM FORM {form_id}` phrase.
+- **Annotations.** Read-only tools carry `readonly: true` (including `submissions-validate`). Creates, sends and submits are writes but not `destructive`; updates and deletes are `destructive`.
+- **Warnings.** `forms-create`, `forms-update`, `entries-create` and `entries-update` may return a `warnings` array for things saved differently than asked. Treat each entry as an action item.

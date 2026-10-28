@@ -36,6 +36,10 @@ Key format: `"{field_id}"` for simple fields, `"{field_id}.{suffix}"` for compou
 
 **These are different formats.** `submissions-submit` prefixes with `input_`. `entries-create` uses bare field IDs.
 
+**Entry metadata for API entries:** `source_url` is empty, because the entry has no embedding page; `ip` and `user_agent` describe the API caller.
+
+**Imports:** `entries-create` accepts `date_created` as a UTC timestamp (`YYYY-MM-DD HH:MM:SS`, or `YYYY-MM-DD`); without it the entry is stamped now. `entries-update` always sets `date_updated` to now. Both return a `warnings` array when a key names a field or input id that is not on the form; those values are not saved, so fix the ids and retry.
+
 ### Checkbox Values
 
 Each checked choice is a separate input keyed by choice index (starting at 1):
@@ -126,6 +130,8 @@ For large result sets:
 ## Bulk Entry Deletion
 
 `entries-delete` supports bulk mode — pass `form_id` instead of `entry_id` to delete all entries for a form server-side.
+
+Passing both `entry_id` and `form_id` is a single delete with a safety check: the entry must belong to that form, or the call is rejected with `gf_ability_form_entry_mismatch` and nothing is deleted. Use the pair when you know the form, so a mixed-up ID can never delete an entry elsewhere.
 
 ### Delete all entries for one form
 

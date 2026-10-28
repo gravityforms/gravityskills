@@ -116,6 +116,7 @@ The ability returns:
 - **`submit_button_logic`** — `null` if no CL on submit button, otherwise `{action, logic_type, rules}`.
 - **`page_logic`** — Array of page button CL (multi-page forms only).
 - **`dependency_map`** — **Most useful view.** Keyed by source field ID, shows everything that field controls. Use this to answer "what happens when field X changes?"
+- **`orphaned`** — On every rule and every `dependency_map` entry. `true` when the source field is not on the form (deleted, or an ID that never existed); `source_field_label` is then empty. `summary.orphaned_rules` counts them. Fix orphaned rules before adding fields: a new field that reuses the ID takes the rules over.
 
 ## Workflow: Auditing Form Logic
 
