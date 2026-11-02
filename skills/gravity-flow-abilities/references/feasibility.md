@@ -11,7 +11,7 @@ Customers often ask whether a workflow design is possible before building. These
 - **Two-actor patterns** (candidate submits, referent completes hidden fields): initial submission + a user_input step whose editable fields are the referent-only fields. Field-level conditional logic on steps requires the step's "field conditional logic" setting.
 - **External participants without WordPress accounts**: email assignees act via signed token links from notification emails — supported for approval and user input steps. They cannot use MCP.
 - **Scheduling/delays**: steps can be scheduled (delay after previous step, or date/date-field based). Expiration with destinations handles "no response by X" routing; resend settings handle reminders.
-- **Notifications**: per-step assignee notifications plus approval/rejection/complete notifications, all templatable with merge tags; `{workflow_entry_link}` is the assignee's action link — REQUIRED for email assignees to act.
+- **Notifications**: per-step assignee notifications plus approval/rejection/complete notifications, all templatable with merge tags; `{workflow_entry_link}` is the assignee's action link — REQUIRED for email assignees to act, and it must resolve to a **front-end** inbox page (`{workflow_entry_link: page_id='N'}` or Workflow → Settings Inbox). A bare tag with Inbox unset becomes `/wp-admin/admin.php?page=gravityflow-inbox`, which email assignees cannot use.
 
 ## Integrations (verify the add-on is installed before promising)
 
@@ -58,5 +58,5 @@ For large multi-workflow asks (e.g. "eight country-specific incorporation workfl
 ## Currently NOT possible via abilities
 
 - Creating WordPress pages/posts (inbox blocks, dashboards) — hand off to the human with exact instructions.
-- Creating/modifying step types outside the allowlist (approval, user_input, notification, choice_routing) — feed-addon and other routing steps are configured in the Flow admin UI.
+- Creating/modifying step types outside the allowlist — those are configured in the Flow admin UI. 
 - Acting as an email assignee (no credential exists) — only delegated processing by a workflow admin.

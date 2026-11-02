@@ -5,16 +5,16 @@ license: GPL-2.0+
 compatibility: Requires Gravity Forms as the MCP host (MCP enabled under Forms → Settings → MCP, with Gravity Flow's tools enabled in its metabox) and Gravity Flow 3.2+ contributing its abilities to that endpoint
 metadata:
   author: gravityforms
-  version: "0.2.0"
+  version: "0.3.0"
 ---
 
 # Gravity Flow Abilities — Agent Skill
 
 ## Ability Routing
 
-21 abilities. Select based on intent:
+22 abilities. Select based on intent:
 
-**Orient** → `system-info` (Flow version + workflow-enabled forms with step counts and pending-entry counts — call this first), `system-step-types` (registered step types with `processable` flags)
+**Orient** → `system-info` (Flow version + workflow-enabled forms + `default_pages` for Workflow → Settings Inbox/Status/Submit — call this first), `system-step-types` (registered step types with `processable` flags)
 
 **Triage** → `inbox-list` (pending tasks for the authenticated user), `inbox-count`
 
@@ -26,15 +26,15 @@ metadata:
 
 **Unstick (admin)** → `steps-restart` (mildest), `workflow-send-to-step`, `workflow-restart`, `workflow-cancel`
 
-**Step configuration (read)** → `steps-list` (a form's steps, summary shape; optional `entry_id` adds per-entry statuses), `steps-get` (one step's stored settings for the four allowlisted types; a step of another type returns the summary only. A secret value is returned as `[redacted]` — never send `[redacted]` back in an update; ask the user for the real value)
+**Step configuration (read)** → `steps-list` (a form's steps, summary shape; optional `entry_id` adds per-entry statuses, omits `workflow_complete` , which still exists and stays last), `steps-get` (one step's stored settings for allowlisted types; a step of another type returns the summary only. A secret value is returned as `[redacted]` — never send `[redacted]` back in an update; ask the user for the real value)
 
-**Build (write)** → `system-step-type-schema` (settings schema for one type — call FIRST), `steps-create`, `steps-update` (partial merge; also toggles `is_active` to deactivate/reactivate a step — the reversible alternative to delete), `steps-delete`
+**Build (write)** → `system-step-type-schema` (settings schema for one type — call FIRST), `steps-create`, `steps-order` (place one step immediately after another), `steps-update` (partial merge; also toggles `is_active` to deactivate/reactivate a step — the reversible alternative to delete), `steps-delete`
 
 **Analyze** → `reports-get` (aggregate completion counts and durations across 7 scopes), `activity-list` (recent workflow event feed — the audit view)
 
 All ability names use format `gravityflow/{area}-{action}`; as MCP tools they appear hyphenated (`gravityflow-inbox-list`) on Gravity Forms' endpoint, alongside the `gravityforms-*` tools.
 
-**Step writes are allowlisted:** only `approval`, `user_input`, `notification`, and `choice_routing` steps can be created or modified programmatically; other types (feed add-on steps, routing, etc.) return an error naming the allowlist — configure those in the Flow admin UI. `workflow_start` / `workflow_complete` are auto-managed sentinels and can never be touched. Never attempt to create or modify workflow steps via `gravityforms/feeds-*` — Flow actively refuses generic feed tools targeting its steps and redirects you to `gravityflow/steps-*`.
+**Step writes are allowlisted:** `approval`, `user_input`, `notification`, `choice_routing`, and simple feed add-on steps can be created or modified programmatically (`steps-create` / `steps-update`). A simple feed step only selects existing feeds of that add-on (`settings.feed_{id}`); how the feed was created is immaterial. Types that add their own settings or process behavior (`zapier`, `salesforce`, `twilio`, `paypal_checkout_capture`, `post_update`, `slicedinvoices`, `wp-e-signature`) return an error naming the allowlist — configure those in the Flow admin UI. `workflow_start` / `workflow_complete` are auto-managed sentinels and cannot be created, updated, deleted, or moved. `steps-order` does not change step settings: it can place any other step after `workflow_start`; `workflow_complete` stays last. Pass `workflow_start` as `after_step_id` to put a step first. Never attempt to create or modify workflow steps via `gravityforms/feeds-*` — Flow actively refuses generic feed tools targeting its steps and redirects you to `gravityflow/steps-*`.
 
 ## Division of Labor: Flow vs Forms
 
@@ -57,7 +57,7 @@ Gravity Forms is the MCP host; Flow contributes its tools to GF's endpoint. Ever
 
 **Read-only group** (each opt-in): `inbox-list`, `inbox-count`, `status-search`, `workflow-status-get`, `timeline-get`, `steps-list`, `steps-get`, `system-info`, `system-step-types`, `system-step-type-schema`, `reports-get`, `activity-list`
 
-**Write & destructive group** (each opt-in): `timeline-note-add`, `steps-process`, `steps-restart`, `workflow-send-to-step`, `workflow-restart`, `workflow-cancel`, `steps-create`, `steps-update`, `steps-delete`
+**Write & destructive group** (each opt-in): `timeline-note-add`, `steps-process`, `steps-restart`, `workflow-send-to-step`, `workflow-restart`, `workflow-cancel`, `steps-create`, `steps-update`, `steps-order`, `steps-delete`
 
 If a tool is absent from discovery or a call is permission-denied, the admin has not enabled that specific tool (or Gravity Forms' MCP is off), or your user lacks the capability. Do not attempt workarounds — tell the user to enable the exact tool in Forms → Settings → MCP (the Gravity Flow metabox), or which capability is missing.
 
@@ -113,7 +113,7 @@ Only conclude "not discoverable" after the accessible routes are exhausted, and 
 
 **Confirmation echo-back:** `workflow-cancel` requires `confirmation: "CANCEL WORKFLOW {entry_id}"`; `workflow-restart` requires `confirmation: "RESTART WORKFLOW {entry_id}"`. On a mismatch the error returns the exact expected phrase — echo it back precisely. Always confirm with the human before these operations.
 
-**Confirmation phrases are NOT self-authorization.** The echo-back exists so a human's "yes" gates the action — it is not a formality you satisfy on your own. Never construct and send a destructive confirmation in the same breath as discovering the operation; the user must have explicitly asked for THIS specific destructive action first. If they have not, stop and state exactly what you would do and what confirmation you need. This applies to every destructive tool: `workflow-cancel`, `workflow-restart`, `steps-delete`, and `steps-process` rejections/reverts.
+**Confirmation phrases are NOT self-authorization.** The echo-back exists so a human's "yes" gates the action — it is not a formality you satisfy on your own. Never construct and send a destructive confirmation in the same breath as discovering the operation; the user must have explicitly asked for THIS specific destructive action first. If they have not, stop and state exactly what you would do and what confirmation you need. This applies to every destructive tool: `workflow-cancel`, `workflow-restart`, `steps-delete`, `step-order` and `steps-process` rejections/reverts.
 
 **Never use writes to discover.** Do not reject, delete, cancel, or restart anything to "find out" how a step is configured or what a validation rule is — that mutates real workflows and real entries. Discovery is always read-only: `steps-list`, `steps-get`, `system-step-type-schema`, `workflow-status-get`, `status-search`. If a config read is permission-denied, report that; do not substitute a destructive probe.
 
@@ -141,13 +141,24 @@ This is the ONE sanctioned exception to "don't edit workflow fields mid-step," a
    A validation error has the code `gravityflow_step_settings_invalid`; `data.fields` maps each setting key to its message, and an unknown key keeps the name you sent. Nothing was saved — fix each named setting and retry.
 3. Verify with `steps-list` — check order and destinations.
 4. `steps-update { step_id, ... }` — partial merge; a step's type is immutable. **When entries are in flight on the step, a change of settings is blocked until you echo `UPDATE STEP {id} AFFECTING {n} ENTRIES`** (an `is_active` change alone needs no phrase; a settings error is reported before the phrase is requested) — and changing assignee settings or routing conditions reroutes ALL of those entries (assignees re-resolved and re-notified automatically). If the user's request itself already specifies the change ("assign it to the finance role"), that IS the authorization — echo the count-bearing confirmation and proceed, reporting the blast radius in your summary. Only stop to confirm when the request leaves the decision open or the in-flight impact plainly exceeds what the user described.
-5. **Deactivate instead of delete when the intent is "stop this step from running."** `steps-update { step_id, is_active: false }` pauses a step reversibly — its config and history are kept and it can be switched back on with `is_active: true`. A bare toggle needs no confirmation phrase. The workflow **skips** a deactivated step: entries in flight go past it and do not wait, and an entry that went past does not come back when the step is activated again. This is the safe, undoable alternative; reach for delete only when a step must be permanently removed.
-6. `steps-delete { step_id, confirmation }` — **permanent, no undo.** The delete is refused while active entries sit on the step (`gravityflow_step_entries_in_flight`, with the count) and while other steps route to it through a destination, a revert setting or a choice-routing target (`gravityflow_step_referenced`, naming them). No confirmation phrase overrides these two blocks: move the entries with `workflow-send-to-step` or deactivate the step (above), and update the referencing steps first. Then delete with `DELETE STEP {id} FROM FORM {form_id}`.
-7. **Loops.** A destination can point to an earlier step. Flow supports a loop of steps that need no user (notification, webhook) only when a condition ends it; a loop without an end condition does not stop. After a build, check every destination with `steps-list`.
+5. `steps-order { step_id, after_step_id }` — place a step immediately after another. Both IDs come from `steps-list`. `workflow_start` and `workflow_complete` cannot be moved; pass `workflow_start` as `after_step_id` to put it first; `workflow_complete` stays last. **When the form has pending entries, a real move is blocked until you echo `REORDER STEP {id} AFTER {after_id} AFFECTING {n} ENTRIES`.** If the user's request itself already specifies the move, that IS the authorization — echo the count-bearing confirmation and proceed, reporting the blast radius in your summary. Only stop to confirm when the request leaves the decision open or the in-flight impact plainly exceeds what the user described.
+6. **Deactivate instead of delete when the intent is "stop this step from running."** `steps-update { step_id, is_active: false }` pauses a step reversibly — its config and history are kept and it can be switched back on with `is_active: true`. A bare toggle needs no confirmation phrase. The workflow **skips** a deactivated step: entries in flight go past it and do not wait, and an entry that went past does not come back when the step is activated again. This is the safe, undoable alternative; reach for delete only when a step must be permanently removed.
+7. `steps-delete { step_id, confirmation }` — **permanent, no undo.** The delete is refused while active entries sit on the step (`gravityflow_step_entries_in_flight`, with the count) and while other steps route to it through a destination, a revert setting or a choice-routing target (`gravityflow_step_referenced`, naming them). No confirmation phrase overrides these two blocks: move the entries with `workflow-send-to-step` or deactivate the step (above), and update the referencing steps first. Then delete with `DELETE STEP {id} FROM FORM {form_id}`.
+8. **Loops.** A destination can point to an earlier step. Flow supports a loop of steps that need no user (notification, webhook) only when a condition ends it; a loop without an end condition does not stop. After a build, check every destination with `steps-list`.
 
 Most validation errors name the concrete problem (unknown keys, invalid assignee, bad destination, invalid enum value) — fix exactly what it names and retry.
 
 **Notification recipients must be valid assignee keys — there is no `submitter` recipient.** To email the person who submitted the entry (e.g. a reject notification telling an applicant the outcome), route the notification to the submission's **email field** (`email_field|{id}`) or a literal `email|{address}` — never a bare string like `"submitter"`. Unlike settings keys, notification **recipients are not always validated on save**: an invalid recipient such as `submitter` (or a non-array recipient value) can be stored *without error* and then silently send to no one. So after configuring any step or reject/revert notification, confirm the recipient resolves to a real `type|id` / `email_field` target, and never report "the submitter will be notified" unless the recipient is a valid resolvable key. When the submitter's email isn't captured in a field, that's a genuine gap to hand back to the user — not something to paper over with a `submitter` placeholder.
+
+**Email assignees need a front-end inbox link.** `email_field|{id}` and `email|{address}` assignees have no wp-admin access. Before writing `{workflow_entry_link}`, `{workflow_entry_url}`, or the other Flow URL merge tags (`workflow_inbox_*`, `workflow_approve_*`, `workflow_reject_*`, `workflow_revert_*`, `workflow_cancel_*`) on create/update:
+
+1. Resolve a front-end page, in this order: (a) the request names a page (ID, URL, or title you can match); (b) sibling steps on this form already use `:page_id='N'` in a notification message (`steps-get`); (c) `system-info` → `default_pages.inbox` (a real page object, not `null`).
+2. Canonical tag when a page ID is known: `{workflow_entry_link: page_id='123'}` — quoted, with a space after the colon. Do not emit `{workflow_entry_link:page_id=N}`.
+3. If a page-reading tool exists (WordPress MCP / REST / another agent page tool — **not** Gravity Forms MCP): inspect the candidate for a `gravityflow/inbox` block or `[gravityflow page="inbox"]` shortcode. Form filter is the block's `selectedFormsJson` or the shortcode `form`/`forms` attribute. Empty filter = all workflow forms (OK). A non-empty list that excludes this `form_id` is the wrong page — pick another resolved candidate or call it out. If no page-reading tool is available, skip this check and say so in the response.
+
+When no front-end page can be resolved: still create/update the step, including `{workflow_entry_link}` so the notification is ready once a page exists. Call out that the generated link will be `/wp-admin/admin.php?page=gravityflow-inbox` and email assignees cannot use it. Hand off the missing action: set Workflow > Settings > Inbox, or supply a `page_id` for `{workflow_entry_link: page_id='N'}`, plus `[gravityflow page="inbox"]` / the inbox block. Do not invent a page ID.
+
+When sibling steps disagree on `page_id`: use the one named in the request, else the most common on the form, and call out the conflict.
 
 ### Feasibility and design questions
 
@@ -175,7 +186,7 @@ Full detail in [references/processing.md](references/processing.md). The essenti
 - **Step statuses:** `pending`, `queued` (not reached yet), `complete`, plus type-specific `approved` / `rejected` / `revert`.
 - **Assignee keys:** `type|id` format — `user_id|5`, `role|editor`, `email|pat@example.com`.
 - **Configured ≠ actual:** a step's configured assignees (from `steps-get`) may be field-resolved (`assignee_field`, `email_field`, …) and resolve per entry at runtime. To know who can act on an entry NOW, read `workflow-status-get`, never `steps-get`.
-- **Email assignees** without a WordPress account act via signed token links in notification emails — they cannot act via MCP, and no credential will give an agent their inbox.
+- **Email assignees** without a WordPress account act via signed token links in notification emails — they cannot act via MCP, and no credential will give an agent their inbox. Those links must target a front-end inbox page (`{workflow_entry_link: page_id='N'}`); see the build playbook.
 
 Full vocabulary, per-assignee meta, and the entries-search escape hatch: [references/status-reference.md](references/status-reference.md).
 
@@ -195,13 +206,15 @@ Full vocabulary, per-assignee meta, and the entries-search escape hatch: [refere
 | Sorting inbox by `date_created` | Oldest *submission* ≠ longest-*waiting* task | Sort by `workflow_timestamp` |
 | Treating `status-search`'s thin results as "no entries" | Degraded mode shows own submissions only | Report the missing view-all permission instead |
 | Tool absent from discovery | Admin hasn't enabled that tool (or GF's MCP is off) | Point to Forms → Settings → MCP (Gravity Flow metabox); no workarounds |
-| Building/modifying steps via `gravityforms/feeds-*` | Actively refused by Flow | Use `gravityflow/steps-create` / `steps-update` / `steps-delete` |
+| Building/modifying steps via `gravityforms/feeds-*` | Actively refused by Flow | Use `gravityflow/steps-create` / `steps-update` / `steps-order` / `steps-delete` |
 | Guessing settings keys on steps-create/update | Unknown keys rejected, nothing saved | Call `system-step-type-schema` first |
 | Using `submitter` (or a bare string) as a notification recipient | Silently stored, emails no one — recipients aren't always validated | Route to the submission's `email_field|{id}` / `email|{address}`; verify the recipient resolves |
 | Updating assignees on a step with in-flight entries without warning the user | Every in-flight entry is rerouted and re-notified | Echo the count-bearing confirmation only after the user confirms the blast radius |
+| Reordering steps on a form with pending entries without the count-bearing phrase | A destination of `next` follows the new order for those entries | Echo `REORDER STEP {id} AFTER {after_id} AFFECTING {n} ENTRIES` when the user already asked for this move, or after they confirm the blast radius |
 | Deleting a step other steps route to | Blocked — dangling destinations | Update the referencing steps' destinations first (the error names them) |
 | Deleting a step with active entries on it | Refused with the count; no phrase overrides it | Move the entries with `workflow-send-to-step` or deactivate the step first |
 | Sending `[redacted]` back in `steps-update` | The literal text is saved as the value | Ask the user for the real value; never echo a redacted value |
+| Bare `{workflow_entry_link}` for `email_field`/`email` assignees when Inbox is unset | Link resolves to `/wp-admin/admin.php?page=gravityflow-inbox`; email assignees cannot log in | Check `system-info` `default_pages.inbox`; if a page ID is known, use `{workflow_entry_link: page_id='N'}`; if none, still create the step, call out the gap, hand off page setup — do not create the WP page |
 
 For "can Flow do X?" feasibility consultations: [references/feasibility.md](references/feasibility.md).
 For steps-process details and error codes: [references/processing.md](references/processing.md).
