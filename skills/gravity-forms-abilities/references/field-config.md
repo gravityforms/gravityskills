@@ -157,6 +157,7 @@ Example — standard name field with First and Last side-by-side:
 |---|---|---|
 | `allowedExtensions` | string | Comma-separated list of allowed file extensions (no dots). Example: `"pdf,doc,docx"` |
 | `maxFileSize` | integer | Maximum file size in megabytes. Example: `5` = 5MB |
+| `multipleFiles` | boolean | Enables multi-file upload. The entry value is then a JSON array of URLs, not one URL. |
 | `maxFiles` | integer | Maximum number of files when multi-file upload is enabled. Omit or `0` for single-file mode. |
 | `multipleFiles` | boolean | Enable multi-file upload. When `true`, users can upload multiple files up to `maxFiles`. |
 
@@ -193,6 +194,9 @@ Example — multi-file with limit:
 | `numberFormat` | string | `"decimal_dot"` (1,234.56), `"decimal_comma"` (1.234,56), or `"currency"` |
 | `rangeMin` | number | Minimum allowed value |
 | `rangeMax` | number | Maximum allowed value |
+| `enableCalculation` | boolean | Makes the field a calculation. Its value comes from `calculationFormula`, not from input. |
+| `calculationFormula` | string | Formula with merge tags, e.g. `"{Qty:1} * 2"` |
+| `calculationRounding` | string | Decimal places, or `"norounding"` |
 
 ### Date (`type: date`)
 
@@ -242,6 +246,10 @@ Example — GDPR consent checkbox:
 | Property | Type | Description |
 |---|---|---|
 | `maxLength` | integer | Maximum character count |
+| `inputMask` | boolean | Text only. Values must match `inputMaskValue` (e.g. `"(999) 999-9999"`; `9` = digit, `a` = letter, `*` = either). Read the mask in `forms-get` before you submit. |
+| `inputMaskValue` | string | The mask pattern |
+| `enablePasswordInput` | boolean | Text only. The value is a password. Do not repeat it back to the user. |
+| `useRichTextEditor` | boolean | Paragraph only. The stored value is HTML. |
 
 ### Multiselect (`type: multiselect`)
 
