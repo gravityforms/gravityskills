@@ -101,9 +101,34 @@ This creates two repeater rows:
 ]
 ```
 
-Nested repeater forms still use the same principle: submit values on child input names, not as nested row objects on the repeater field ID. Use `forms-get` to confirm assigned child field IDs before building the submission payload.
+#### Nested repeaters
 
-Avoid these shapes:
+A child of a nested repeater needs one more array level: one array for each parent row. For repeater `1` with child text field `2` and nested repeater `3`, which holds child text field `4`:
+
+```json
+{
+  "form_id": 1,
+  "input_values": {
+    "input_2": ["Reg 1", "Reg 2"],
+    "input_4": [["Guest A", "Guest B"], ["Guest C"]]
+  }
+}
+```
+
+The outer index is the parent row, and the inner index is the nested row. This stores:
+
+```json
+[
+  { "2": "Reg 1", "3": [{ "4": "Guest A" }, { "4": "Guest B" }] },
+  { "2": "Reg 2", "3": [{ "4": "Guest C" }] }
+]
+```
+
+Children of the outer repeater (`input_2`) stay flat. A flat array on a nested child (`"input_4": ["Guest A", "Guest B", "Guest C"]`) returns `gf_ability_invalid_repeater_input`, because the rows cannot be matched to a parent. Use `forms-get` to confirm assigned child field IDs before building the submission payload.
+
+#### Shapes to avoid
+
+These shapes return `gf_ability_invalid_repeater_input`, because the repeater field ID takes no value of its own:
 
 ```json
 {
@@ -120,7 +145,7 @@ Avoid these shapes:
 }
 ```
 
-Use the first rejected shape only when working directly with raw stored entry data, not with `submissions-submit` or `submissions-validate`.
+The first shape is the stored entry format. Use it only with `entries-create`, keyed by field ID without the `input_` prefix (`"1": [{"2": "Alice"}]`), and expect it back from `entries-get`.
 
 ## Entry Search
 
