@@ -36,7 +36,9 @@ Submission example (field ID 5): `{ "input_5.3": "John", "input_5.6": "Doe" }`
 | `.5` | ZIP / Postal Code |
 | `.6` | Country |
 
-Submission example (field ID 3): `{ "input_3.1": "123 Main St", "input_3.3": "Springfield", "input_3.4": "IL", "input_3.5": "62701", "input_3.6": "United States" }`
+Submission example (field ID 3): `{ "input_3.1": "123 Main St", "input_3.3": "Springfield", "input_3.4": "IL", "input_3.5": "62701", "input_3.6": "US" }`
+
+The country (`.6`) takes the two-letter country code. A country name fails validation.
 
 ### Time Field (`type: time`)
 
@@ -203,7 +205,7 @@ Example — multi-file with limit:
 
 | Property | Type | Description |
 |---|---|---|
-| `dateType` | string | `"datepicker"` (calendar popup) or `"datefield"` (manual entry) or `"datedropdown"` (dropdowns) |
+| `dateType` | string | `"datefield"` (three inputs: month, day, year; the default for `forms-create` and the editor), `"datepicker"` (calendar popup, one value) or `"datedropdown"` (three dropdowns) |
 | `dateFormat` | string | `"mdy"`, `"dmy"`, or `"ymd"` |
 | `calendarIconType` | string | `"none"`, `"calendar"`, or `"custom"` |
 
@@ -299,6 +301,7 @@ Rules:
 - Nested repeaters are supported by using `type: "repeater"` inside another repeater's `fields` array.
 - Layout properties and deprecated Ready Class stripping work recursively on child fields.
 - Pricing child fields are scoped to their current repeater. A `quantity` or `option` child field links to a `product` child field in the same repeater scope, not an unrelated top-level product.
+- No conditional logic inside repeaters. A child field cannot have `conditionalLogic`, and no rule anywhere on the form (fields, buttons, notifications, routing, confirmations) can use a child field as its source. Both return `gf_ability_invalid_conditional_logic`, because the editor and the rendered form do not support them. Send `conditionalLogic: ""` to clear logic stored on a child.
 
 Simple repeater example:
 

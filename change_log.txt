@@ -1,4 +1,6 @@
 ### 1.1.3 | 2026-10-27
+- gravity-forms-abilities: Document repeater row errors in validation messages, the date part shape for three-input date children, consent rows, the repeater value check on entries-create and entries-update, and that conditional logic is not available on or from repeater children.
+- gravity-forms-abilities: Document that the address country takes the two-letter code, and that a select with no placeholder needs one of its choices.
 - gravity-forms-abilities: Document repeater field creation, repeatable child-field discovery, child-array submission values with one array for each parent row in nested repeaters, and the gf_ability_invalid_repeater_input error.
 - gravity-forms-abilities: Document the calculation, input mask, password, rich text and multi-file settings that forms-get now shows.
 - gravity-forms-abilities: Document that a changed inputType on forms-update is a replacement, like a changed type, so inputs from the old shape are not kept.

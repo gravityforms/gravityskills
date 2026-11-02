@@ -124,6 +124,8 @@ The outer index is the parent row, and the inner index is the nested row. This s
 ]
 ```
 
+A three-input date child (`dateType` `datefield`, the default, or `datedropdown`) adds one more level: each row is an array of date parts in the order of the date format, e.g. `"input_6": [["01", "02", "2027"], ["03", "04", "2027"]]` for mm/dd/yyyy. A date string or the `.1`/`.2`/`.3` keys return `gf_ability_invalid_repeater_input`.
+
 Children of the outer repeater (`input_2`) stay flat. A flat array on a nested child (`"input_4": ["Guest A", "Guest B", "Guest C"]`) returns `gf_ability_invalid_repeater_input`, because the rows cannot be matched to a parent. Use `forms-get` to confirm assigned child field IDs before building the submission payload.
 
 #### Shapes to avoid
@@ -145,7 +147,7 @@ These shapes return `gf_ability_invalid_repeater_input`, because the repeater fi
 }
 ```
 
-The first shape is the stored entry format. Use it only with `entries-create`, keyed by field ID without the `input_` prefix (`"1": [{"2": "Alice"}]`), and expect it back from `entries-get`.
+The first shape is the stored entry format. Use it only with `entries-create` and `entries-update`, keyed by field ID without the `input_` prefix (`"1": [{"2": "Alice"}]`), and expect it back from `entries-get`. Both abilities return `gf_ability_invalid_repeater_input` for any other repeater value, such as a string or a flat list. On `entries-update` the rows you send replace all stored rows; leave the repeater out to keep them.
 
 ## Entry Search
 

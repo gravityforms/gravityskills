@@ -141,7 +141,7 @@ Common shapes: route different emails to clinicians vs patients (two notificatio
 1. Call `forms-get` — learn field IDs and structure
 2. Build `input_values` using `input_{field_id}` key format
 3. Call `submissions-submit`
-4. Check `is_valid` in response — if false, read `validation_messages`
+4. Check `is_valid` in response — if false, read `validation_messages`. A repeater's message names each failed row and child field, e.g. `"Row 2 Name: This field is required."`
 
 For most compound fields (name, address), use dot-notation sub-input keys: `input_{field_id}.{suffix}` (e.g., `input_5.3` for First Name on field 5). This is the canonical format matching how GF stores sub-input IDs internally.
 
@@ -153,7 +153,7 @@ For **multiselect fields**, pass values as an array: `"input_3": ["Red", "Blue"]
 
 **Dynamic population:** `field_values` is keyed by parameter name (a field's `inputName`, or a sub-input's `name`), e.g. `"field_values": {"promo": "SPRING26"}`. It fills fields that have `allowsPrepopulate: true` when `input_values` carries no value for them; an explicit `input_values` entry always wins. `submissions-validate` accepts it too.
 
-For **repeater fields**, submit values on the child input names as arrays, not on the repeater field ID. Example: if repeater `1` contains child text field `2`, submit `"input_2": ["Alice", "Bob"]` for two rows. Compound child fields use one array per sub-input, e.g. `"input_3_3": ["Alice", "Bob"]` and `"input_3_6": ["Smith", "Jones"]` for a Name child field. A child of a **nested** repeater needs one array for each parent row: `"input_4": [["Guest A", "Guest B"], ["Guest C"]]`. A value on the repeater ID, or a flat array on a nested child, returns `gf_ability_invalid_repeater_input` and nothing is saved. See [references/entry-operations.md](references/entry-operations.md) §Repeater Submission Values for nested repeater examples.
+For **repeater fields**, submit values on the child input names as arrays, not on the repeater field ID. Example: if repeater `1` contains child text field `2`, submit `"input_2": ["Alice", "Bob"]` for two rows. Compound child fields use one array per sub-input, e.g. `"input_3_3": ["Alice", "Bob"]` and `"input_3_6": ["Smith", "Jones"]` for a Name child field. A child of a **nested** repeater needs one array for each parent row: `"input_4": [["Guest A", "Guest B"], ["Guest C"]]`. A three-input date child (`dateType` `datefield`, the default, or `datedropdown`) takes one array of date parts for each row, in the order of its date format: `"input_5": [["01", "02", "2027"]]` for mm/dd/yyyy. A value on the repeater ID, a flat array on a nested child, or a date string or `.1`/`.2`/`.3` keys on a three-input date child returns `gf_ability_invalid_repeater_input` and nothing is saved. For a consent child, send only `.1` for each row; the consent text and form revision are filled in for each checked row. See [references/entry-operations.md](references/entry-operations.md) §Repeater Submission Values for nested repeater examples.
 
 **`submissions-submit` vs `entries-create`:**
 - `submissions-submit` = full pipeline (validation → entry → notifications → feeds)
@@ -369,6 +369,9 @@ For CL structure details, operators, and common patterns, see [references/condit
 | Wrong input key format: `"1"` vs `"input_1"` | Silent data loss | `submissions-submit` uses `input_{id}`, `entries-create` uses `"{id}"` |
 | Compound field without sub-input suffixes | Data not captured | Use `default_inputs` from `system-field-types`; for time fields send Hour/Minute/AM-PM together |
 | Submitting repeater values on the repeater field ID, or a flat array on a nested repeater child | `gf_ability_invalid_repeater_input` (older versions saved empty rows with no error) | Submit arrays on child input names, e.g. `"input_2": ["Alice", "Bob"]`, not `"input_1"` |
+| Conditional logic on a repeater child, or a rule (field, notification, routing, confirmation) that uses a repeater child as its source | `gf_ability_invalid_conditional_logic`. The editor and the rendered form do not support either | Keep rules on top-level fields only. Send `conditionalLogic: ""` to clear logic stored on a child |
+| Address country as a name (`"United States"`) | Validation fails: `Please enter a valid value.` | Send the two-letter country code: `"input_3.6": "US"` |
+| Leaving out an optional select that has no placeholder | Validation fails: `Invalid selection.` | A browser always sends one of the choices; send one too, or give the field a `placeholder` |
 | Adding a non-repeatable field inside a repeater | `forms-create` / `forms-update` rejects the form | Check `repeatable: true` from `system-field-types` before adding a child field |
 | Not checking `is_valid` after submission | Miss validation failures | Always check response `is_valid` field |
 | Using `@example.com` emails in submissions | Rejected as spam by GF email field | Use realistic test domains (e.g., `@testmail.dev`) |

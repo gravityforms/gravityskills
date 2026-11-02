@@ -6,6 +6,8 @@ Conditional logic (CL) controls visibility and behavior of form elements based o
 
 Use `forms-analyze-logic` to get a structured analysis rather than parsing raw CL from `forms-get`.
 
+Conditional logic is not available inside repeaters. A field inside a repeater cannot have CL, and no rule can use a field inside a repeater as its source. The abilities return `gf_ability_invalid_conditional_logic` for both.
+
 ## CL Structure
 
 Every CL block follows this structure:
