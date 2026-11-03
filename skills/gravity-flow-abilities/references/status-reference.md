@@ -43,9 +43,9 @@ This policy is a **configurable step setting**, not a fixed law. If a workflow i
 
 Step *configurations* may also use field-resolved types (`assignee_field`, `assignee_user_field`, `email_field`) that resolve per entry at runtime — which is why `steps-get` shows configured assignees but only `workflow-status-get` shows an entry's actual ones.
 
-**Email assignees** act through signed token links embedded in notification emails. They never authenticate to WordPress, so no MCP credential corresponds to them. An agent cannot act *as* an email assignee — only a workflow admin can act *on behalf of* one via delegated `steps-process` with `assignee_key: "email|..."`.
+**Email assignees** act through signed token links embedded in notification emails. They never authenticate to WordPress, so no MCP credential corresponds to them. An agent cannot act *as* an email assignee — only a workflow admin can act *on behalf of* one via delegated `steps-process` with `assignee_key: "email|..."`. Find those pending entries with `status-search { assignee_key: "email|a@b.com" }` (view-all). Do **not** expect them in `inbox-list { user_id }` even when that WordPress user's account email is the same address. Field-resolved user and role assignees (`assignee_field`, `assignee_user_field`, `assignee_role_field`) **are** included once they resolve to `user_id|…` or `role|…`.
 
-**"Their link doesn't work" playbook** — always cover all three parts: (1) explain the model — email assignees act via the signed link in their notification, not by logging in, and links are entry+step+assignee-specific and can expire or be superseded; (2) verify with `workflow-status-get` that the step is still pending and they are still a listed assignee (if the step moved on, the old link is dead by design); (3) remediate with `steps-restart` (admin) to re-send a fresh token link — or delegated `steps-process` if the admin should act for them. Also check the step's notification message actually contains `{workflow_entry_link}` (use `{workflow_entry_link:page_id=N}` to point the link at a specific front-end inbox page).
+**"Their link doesn't work" playbook** — always cover all three parts: (1) explain the model — email assignees act via the signed link in their notification, not by logging in, and links are entry+step+assignee-specific and can expire or be superseded; (2) verify with `workflow-status-get` that the step is still pending and they are still a listed assignee (if the step moved on, the old link is dead by design); (3) remediate with `steps-restart` (admin) to re-send a fresh token link — or delegated `steps-process` if the admin should act for them. Also check the step's notification message actually contains `{workflow_entry_link}` pointed at a front-end inbox: `{workflow_entry_link: page_id='N'}`. Confirm `N` from the request, sibling steps, or `system-info` `default_pages.inbox` (null means Workflow → Settings Inbox is unset and a bare merge tag falls back to `/wp-admin/admin.php?page=gravityflow-inbox`, which email assignees cannot use).
 
 ## Workflow entry meta keys (escape hatch)
 
@@ -75,6 +75,8 @@ Example — all entries stuck on step 41 in form 3:
 ```
 
 Note: GF's `entries-search` takes `form_ids` (an array), not `form_id`.
+
+Per-assignee meta (`workflow_user_id_{n}`, `workflow_role_{role}`, `workflow_email_{email}`) can remain `pending` after the workflow is cancelled or otherwise finished, when assignee purge did not run. Pair those keys with `workflow_final_status` = `pending` (or pass `status: "pending"` to `status-search`) so the result is in-flight only. Inbox-list follows the same leftover-meta behavior: a row with `step_id` 0 has no current step.
 
 Example — everything user 7 has ever approved on form 3:
 
