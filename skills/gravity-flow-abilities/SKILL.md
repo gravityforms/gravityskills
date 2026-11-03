@@ -16,13 +16,13 @@ metadata:
 
 **Orient** → `system-info` (Flow version + workflow-enabled forms + `default_pages` for Workflow → Settings Inbox/Status/Submit — call this first), `system-step-types` (registered step types with `processable` flags)
 
-**Triage** → `inbox-list` (pending tasks for the authenticated user), `inbox-count`
+**Triage** → `inbox-list` (pending tasks for the authenticated user, or another WordPress user with `user_id` when the caller has view-all), `inbox-count`. A WordPress user's inbox, not a role or an email.
 
-**Search** → `status-search` (workflow entries filtered by form, workflow status, step, assignee, date range; paged)
+**Search** → `status-search` (workflow entries filtered by form, workflow status, step, assignee, date range; paged). Use this for a role, an email, or one exact `assignee_key`.
 
 **Diagnose** → `workflow-status-get` (one entry: final status, current step, live assignees with per-assignee statuses, per-step status map), `timeline-get` (entry history: who did what, when, with notes)
 
-**Act** → `steps-process` (approve/reject/revert an approval step, or complete a user-input step, with note and field values), `timeline-note-add` (annotate an entry's workflow timeline)
+**Act** → `steps-process` (approve/reject/revert an approval step, or complete a user-input step, with note and field values; delegated `assignee_key` accepts `user_id|…`, `role|…`, or `email|…`), `timeline-note-add` (annotate an entry's workflow timeline)
 
 **Unstick (admin)** → `steps-restart` (mildest), `workflow-send-to-step`, `workflow-restart`, `workflow-cancel`
 
@@ -71,9 +71,12 @@ Flow's tools ride Gravity Forms' MCP endpoint — there is no separate Flow endp
 
 MCP authenticates as a real WordPress user (application password). Every ability acts as that user — there is no "act as user X" input.
 
-- **Inbox is personal.** `inbox-list` returns tasks assigned to the authenticated user (directly, via role, or via resolved fields). Different credentials = different inbox.
+- **Inbox is personal by default.** `inbox-list` / `inbox-count` without `user_id` (or with the authenticated user's own id) return tasks whose **resolved** assignee is that user or one of their roles. That includes steps configured with `assignee_field` / `assignee_user_field` / `assignee_role_field` once those fields have resolved. Different credentials = different inbox.
+- **Another user's inbox** (`inbox-list` / `inbox-count` with `user_id`) is a read of that WordPress user's pending set, matching the web inbox. It requires `gravityflow_status_view_all` in addition to `gravityflow_inbox`. It is not impersonation. Each list item includes `assignee_keys` (`user_id|{id}` and/or `role|{slug}`) — pass one of those to delegated `steps-process`. A role-only row cannot be processed as `user_id|{id}`. It does **not** include tasks whose resolved assignee is an email address, even if that address matches the WordPress user's account email.
+- **Which lookup.** A WordPress user's inbox (that user plus their roles) → `inbox-list` / `inbox-count` with `user_id`. A role, an email, or one exact key → `status-search` with `assignee_key` and `status: "pending"`. Do not add inbox counts across users: a role-assigned entry appears in every matching user's inbox.
+- **Age is client-side.** There is no waiting-since filter. Page `inbox-list` and keep rows whose `workflow_timestamp` (step arrival, UTC) is older than the cutoff. `total_count` is the full inbox, not the aged subset. `inbox-count` answers "how many outstanding." Skip rows whose `step_id` is 0 (no current step; leftover assignee meta) or confirm with `workflow-status-get` before acting.
 - **Processing as self** requires the authenticated user to be a *pending assignee* on the entry's current step — the same rule the web inbox enforces.
-- **Delegated processing** (`steps-process` with `assignee_key`) acts on behalf of another pending assignee. It requires workflow-admin permission AND a `note` explaining why. The action is dual-attributed: the timeline note names both identities (`[On behalf of X (key)] …`) and the activity feed records a `delegated` event. A delegated action is never indistinguishable from the assignee acting themselves.
+- **Delegated processing** (`steps-process` with `assignee_key`) acts on behalf of another pending assignee (`user_id|…`, `role|…`, or `email|…`). It requires workflow-admin permission (`gravityflow_admin_actions`) AND a `note` explaining why. The action is dual-attributed: the timeline note names both identities (`[On behalf of X (key)] …`) and the activity feed records a `delegated` event. A delegated action is never indistinguishable from the assignee acting themselves.
 - **Entry visibility:** entry-scoped abilities (`workflow-status-get`, `timeline-get`, `timeline-note-add`, `steps-list` with `entry_id`) succeed only when the user holds the **`gravityflow_status_view_all`** capability, is the entry's submitter, or is a current/past assignee. An invisible entry returns the same error as a nonexistent one — do not retry or enumerate; verify existence via `status-search` or ask the user. To let someone (e.g. a manager) see *other* users' entries without making them a WordPress administrator, the answer is to grant `gravityflow_status_view_all` to their role — that exact capability, never a broader role. (The MCP surface exposes no role/capability directory, so you cannot enumerate which roles already hold it; name the capability and how to grant it.)
 - **Never report absence without verifying.** `system-info`'s workflow-form list is a *summary* — a form not obviously matching the goal there is NOT proof it lacks a workflow or doesn't exist. Before telling the user "no such form/workflow/step," confirm: call `steps-list { form_id }` on the candidate form (workflow-enabled forms have steps) or `status-search`. Concluding absence from a single `system-info` read is a failure mode; the target is usually discoverable with one more read.
 - **Workflow content lives in the steps, not just the form.** When a request concerns instructions, notifications, assignees, due dates, or any per-step content ("update the dates", "add instructions", "who is assigned", "which notifications go out"), enumerate the workflow with `steps-list` then `steps-get` on each step — form-level settings (title, form schedule, form notifications) are only part of the surface. Editing the form and stopping there, then claiming the request is complete, is a failure mode: the step layer (step instructions, assignee/reject notifications, step schedules and due dates) usually holds most of what the request targets. Sweep every step before reporting done.
@@ -82,7 +85,7 @@ MCP authenticates as a real WordPress user (application password). Every ability
 
 ### Triage and act (the primary loop)
 
-1. `inbox-list` → pending tasks with `entry_id`, `form_id`, `step_id`, `step_name`, `step_type`, `submitter`, `workflow_timestamp`, `due_date`
+1. `inbox-list` → pending tasks with `entry_id`, `form_id`, `step_id`, `step_name`, `step_type`, `submitter`, `workflow_timestamp`, `due_date`, `assignee_keys`
 2. Hydrate details as needed: `gravityforms/entries-get { entry_id }`
 3. `steps-process { entry_id, status, note }` — always include a `note`; approvals without context are poor audit trail
 4. Check the response: `step_status` confirms your action; `final_status` + `current_step_id` show where the workflow went next
@@ -119,7 +122,15 @@ Only conclude "not discoverable" after the accessible routes are exhausted, and 
 
 ### Search
 
-`status-search` filters: `form_id`, `status` (workflow final status), `step_id`, `assignee_key`, date range, paging. With the `gravityflow_status_view_all` capability it spans all entries; without it, results are silently limited to the user's **own submissions** — if results look incomplete, that's why (tell the user which permission is missing rather than retrying).
+`status-search` filters: `form_id`, `status` (workflow final status), `step_id`, `assignee_key`, date range, paging. With the `gravityflow_status_view_all` capability it spans all entries; without it, results are silently limited to the user's **own submissions** — if results look incomplete, that's why (tell the user which permission is missing rather than retrying). Exact `assignee_key` (`user_id|123`, `role|editor`, `email|a@b.com`) matches that one pending key; it does **not** expand a WordPress user's roles, so it is not a substitute for `inbox-list { user_id }`. `assignee_status` `pending` (the default) can match finished workflows with leftover assignee meta — pass `status: "pending"` as well for in-flight entries only.
+
+**Email-field assignees** (token-link actors, no WordPress login) are found with exact-key search, not a user inbox:
+
+1. `status-search { form_id, status: "pending", assignee_key: "email|a@b.com" }` (view-all)
+2. `workflow-status-get` on each entry if you need the current step type or editable fields
+3. Delegated `steps-process { entry_id, assignee_key: "email|a@b.com", status, note }` (`gravityflow_admin_actions`)
+
+Do not assume a WordPress user whose account email is `a@b.com` will see those entries in `inbox-list { user_id }`.
 
 For filters `status-search` doesn't offer, use `gravityforms/entries-search` with workflow meta keys as `field_filters` — key table in [references/status-reference.md](references/status-reference.md).
 
@@ -204,6 +215,8 @@ Full vocabulary, per-assignee meta, and the entries-search escape hatch: [refere
 | `assignee_key` without a `note` | Validation error | Delegation always requires a reason note |
 | `field_values` on an approval step, or on non-editable fields | Rejected fail-closed | user_input steps only; respect the editable-field list in the error |
 | Sorting inbox by `date_created` | Oldest *submission* ≠ longest-*waiting* task | Sort by `workflow_timestamp` |
+| Using `inbox-list` to count a role, or summing inboxes across users | A role-assigned entry is counted once per user who holds the role | Use `status-search { assignee_key: "role|…", status: "pending" }` |
+| Acting on an inbox row with `step_id` 0 | `steps-process` fails — leftover assignee meta, no current step | Skip those rows, or confirm with `workflow-status-get` |
 | Treating `status-search`'s thin results as "no entries" | Degraded mode shows own submissions only | Report the missing view-all permission instead |
 | Tool absent from discovery | Admin hasn't enabled that tool (or GF's MCP is off) | Point to Forms → Settings → MCP (Gravity Flow metabox); no workarounds |
 | Building/modifying steps via `gravityforms/feeds-*` | Actively refused by Flow | Use `gravityflow/steps-create` / `steps-update` / `steps-order` / `steps-delete` |

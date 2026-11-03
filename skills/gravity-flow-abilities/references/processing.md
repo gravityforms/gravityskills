@@ -10,7 +10,7 @@
 | `status` | Required — see per-type table below |
 | `note` | Optional in general; REQUIRED when the step config demands one for the status (common on reject/revert), and ALWAYS required for delegated calls. Include one anyway — approvals without context make poor audit trail |
 | `field_values` | user_input steps only; `input_{field_id}` / `input_{field_id}.{sub}` keys |
-| `assignee_key` | Delegation (`type|id`); requires workflow-admin permission + `note` |
+| `assignee_key` | Delegation (`user_id|…`, `role|…`, or `email|…`); requires workflow-admin permission + `note` |
 
 ## Valid status by step type
 
@@ -25,7 +25,7 @@
 ## Authorization
 
 - **As self:** authenticated user must be a *pending* assignee on the current step (directly, via role, or via a field that resolved to them). Same rule as the web inbox.
-- **Delegated (`assignee_key`):** requires workflow-admin permission. The key must resolve to a *pending* assignee on the current step. `note` is required. The result is dual-attributed:
+- **Delegated (`assignee_key`):** requires workflow-admin permission (`gravityflow_admin_actions`, not `gravityflow_status_view_all`). The key must resolve to a *pending* assignee on the current step — `user_id|…`, `role|…`, or `email|…`. A role-only inbox row is processed as `role|{slug}`, not as the covering user's `user_id`. `note` is required. The result is dual-attributed:
   - Timeline note: attributed to the acting admin, body prefixed `[On behalf of {display_name} ({key})]`
   - Activity feed: a `delegated` assignee event (acting admin in `display_name`, acted-for assignee in `assignee_key`) alongside the normal status event
 
