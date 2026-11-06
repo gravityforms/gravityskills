@@ -36,7 +36,9 @@ Submission example (field ID 5): `{ "input_5.3": "John", "input_5.6": "Doe" }`
 | `.5` | ZIP / Postal Code |
 | `.6` | Country |
 
-Submission example (field ID 3): `{ "input_3.1": "123 Main St", "input_3.3": "Springfield", "input_3.4": "IL", "input_3.5": "62701", "input_3.6": "United States" }`
+Submission example (field ID 3): `{ "input_3.1": "123 Main St", "input_3.3": "Springfield", "input_3.4": "IL", "input_3.5": "62701", "input_3.6": "US" }`
+
+The country (`.6`) takes the two-letter country code. A country name fails validation.
 
 ### Time Field (`type: time`)
 
@@ -83,6 +85,7 @@ Choice field types: `select`, `radio`, `checkbox`, `multiselect`, `image_choice`
 | `name` | Name | No | **Yes** | prefix/first/middle/last/suffix sub-inputs |
 | `address` | Address | No | **Yes** | street/city/state/zip/country sub-inputs |
 | `time` | Time | No | **Yes** | hour/minute/AM-PM sub-inputs |
+| `repeater` | Repeater | No | No | nested `fields` array for repeatable groups |
 | `hidden` | Hidden | No | No | not visible, good for tracking data |
 | `website` | Website | No | No | URL validation, conditional logic |
 | `fileupload` | File Upload | No | No | `allowedExtensions`, `maxFileSize`, `maxFiles` — see Type-Specific Config |
@@ -157,6 +160,7 @@ Example — standard name field with First and Last side-by-side:
 |---|---|---|
 | `allowedExtensions` | string | Comma-separated list of allowed file extensions (no dots). Example: `"pdf,doc,docx"` |
 | `maxFileSize` | integer | Maximum file size in megabytes. Example: `5` = 5MB |
+| `multipleFiles` | boolean | Enables multi-file upload. The entry value is then a JSON array of URLs, not one URL. |
 | `maxFiles` | integer | Maximum number of files when multi-file upload is enabled. Omit or `0` for single-file mode. |
 | `multipleFiles` | boolean | Enable multi-file upload. When `true`, users can upload multiple files up to `maxFiles`. |
 
@@ -193,12 +197,15 @@ Example — multi-file with limit:
 | `numberFormat` | string | `"decimal_dot"` (1,234.56), `"decimal_comma"` (1.234,56), or `"currency"` |
 | `rangeMin` | number | Minimum allowed value |
 | `rangeMax` | number | Maximum allowed value |
+| `enableCalculation` | boolean | Makes the field a calculation. Its value comes from `calculationFormula`, not from input. |
+| `calculationFormula` | string | Formula with merge tags, e.g. `"{Qty:1} * 2"` |
+| `calculationRounding` | string | Decimal places, or `"norounding"` |
 
 ### Date (`type: date`)
 
 | Property | Type | Description |
 |---|---|---|
-| `dateType` | string | `"datepicker"` (calendar popup) or `"datefield"` (manual entry) or `"datedropdown"` (dropdowns) |
+| `dateType` | string | `"datefield"` (three inputs: month, day, year; the default for `forms-create` and the editor), `"datepicker"` (calendar popup, one value) or `"datedropdown"` (three dropdowns) |
 | `dateFormat` | string | `"mdy"`, `"dmy"`, or `"ymd"` |
 | `calendarIconType` | string | `"none"`, `"calendar"`, or `"custom"` |
 
@@ -242,6 +249,10 @@ Example — GDPR consent checkbox:
 | Property | Type | Description |
 |---|---|---|
 | `maxLength` | integer | Maximum character count |
+| `inputMask` | boolean | Text only. Values must match `inputMaskValue` (e.g. `"(999) 999-9999"`; `9` = digit, `a` = letter, `*` = either). Read the mask in `forms-get` before you submit. |
+| `inputMaskValue` | string | The mask pattern |
+| `enablePasswordInput` | boolean | Text only. The value is a password. Do not repeat it back to the user. |
+| `useRichTextEditor` | boolean | Paragraph only. The stored value is HTML. |
 
 ### Multiselect (`type: multiselect`)
 
@@ -268,6 +279,72 @@ Example — GDPR consent checkbox:
 }
 ```
 The `is` operator does not work for individual multiselect values — it matches the entire stored string.
+
+### Repeater (`type: repeater`)
+
+Repeater fields contain child fields in a nested `fields` array. The child field definitions use the same shape as top-level fields.
+
+| Property | Type | Description |
+|---|---|---|
+| `fields` | array | Child field definitions. Required for a useful repeater. |
+| `maxItems` | integer | Maximum number of rows. Omit or use `0` for no explicit limit. |
+| `addButtonText` | string | Custom Add button text. |
+| `removeButtonText` | string | Custom Remove button text. |
+| `repeaterRowLabel` | string | Row label used in the UI, e.g. `Participant`. |
+| `showRepeaterRowLabel` | boolean | Whether row labels are visibly shown. |
+
+Rules:
+
+- Call `system-field-types` first and only use child field types with `repeatable: true`.
+- Child field IDs must be unique across the whole form, including top-level fields and all nested repeater children.
+- If child IDs are omitted, the abilities layer assigns globally unique IDs.
+- Nested repeaters are supported by using `type: "repeater"` inside another repeater's `fields` array.
+- Layout properties and deprecated Ready Class stripping work recursively on child fields.
+- Pricing child fields are scoped to their current repeater. A `quantity` or `option` child field links to a `product` child field in the same repeater scope, not an unrelated top-level product.
+- No conditional logic inside repeaters. A child field cannot have `conditionalLogic`, and no rule anywhere on the form (fields, buttons, notifications, routing, confirmations) can use a child field as its source. Both return `gf_ability_invalid_conditional_logic`, because the editor and the rendered form do not support them. Send `conditionalLogic: ""` to clear logic stored on a child.
+
+Simple repeater example:
+
+```json
+{
+  "type": "repeater",
+  "label": "Participants",
+  "repeaterRowLabel": "Participant",
+  "maxItems": 4,
+  "fields": [
+    { "type": "text", "label": "Company" },
+    { "type": "name", "label": "Participant Name", "isRequired": true },
+    { "type": "email", "label": "Participant Email", "isRequired": true }
+  ]
+}
+```
+
+Nested repeater example:
+
+```json
+{
+  "type": "repeater",
+  "label": "Registrations",
+  "repeaterRowLabel": "Registration",
+  "fields": [
+    { "type": "name", "label": "Registrant", "isRequired": true },
+    {
+      "type": "repeater",
+      "label": "Guests",
+      "repeaterRowLabel": "Guest",
+      "fields": [
+        { "type": "text", "label": "Guest Name", "isRequired": true },
+        { "type": "select", "label": "Meal", "choices": [
+          { "text": "Standard", "value": "standard" },
+          { "text": "Vegetarian", "value": "vegetarian" }
+        ]}
+      ]
+    }
+  ]
+}
+```
+
+Repeater submission examples are in [entry-operations.md](entry-operations.md) §Repeater Submission Values.
 
 ## Form Design Patterns
 

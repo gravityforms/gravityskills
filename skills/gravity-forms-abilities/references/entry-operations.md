@@ -5,6 +5,7 @@
 ### For `submissions-submit` (like a browser POST)
 
 Key format: `input_{field_id}` for simple fields, `input_{field_id}.{suffix}` for compound fields.
+`submissions-validate` uses the same `input_values` format.
 
 ```json
 {
@@ -36,6 +37,10 @@ Key format: `"{field_id}"` for simple fields, `"{field_id}.{suffix}"` for compou
 
 **These are different formats.** `submissions-submit` prefixes with `input_`. `entries-create` uses bare field IDs.
 
+**Entry metadata for API entries:** `source_url` is empty, because the entry has no embedding page; `ip` and `user_agent` describe the API caller.
+
+**Imports:** `entries-create` accepts `date_created` as a UTC timestamp (`YYYY-MM-DD HH:MM:SS`, or `YYYY-MM-DD`); without it the entry is stamped now. `entries-update` always sets `date_updated` to now. Both return a `warnings` array when a key names a field or input id that is not on the form. The entry is already saved without those values, so do not call `entries-create` again (that makes a duplicate). Call `entries-update` with the returned `entry_id` and the corrected ids.
+
 ### Checkbox Values
 
 Each checked choice is a separate input keyed by choice index (starting at 1):
@@ -48,6 +53,101 @@ Each checked choice is a separate input keyed by choice index (starting at 1):
 ```
 
 Only include checked values — omit unchecked choices entirely.
+
+### Repeater Submission Values
+
+Repeater rows are submitted as arrays on the child input names. Do not submit structured objects on the repeater field ID.
+
+For a repeater field `1` containing child text field `2`, two rows are submitted like this:
+
+```json
+{
+  "form_id": 1,
+  "input_values": {
+    "input_2": ["Alice", "Bob"]
+  }
+}
+```
+
+Gravity Forms stores that under the repeater field internally, but the ability input remains flattened by child input name:
+
+```json
+{
+  "1": [
+    { "2": "Alice" },
+    { "2": "Bob" }
+  ]
+}
+```
+
+Compound child fields use one array per sub-input. For a Name child field `2`, submit First and Last arrays with matching indexes:
+
+```json
+{
+  "form_id": 1,
+  "input_values": {
+    "input_2_3": ["Alice", "Bob"],
+    "input_2_6": ["Smith", "Jones"]
+  }
+}
+```
+
+This creates two repeater rows:
+
+```json
+[
+  { "2.3": "Alice", "2.6": "Smith" },
+  { "2.3": "Bob", "2.6": "Jones" }
+]
+```
+
+#### Nested repeaters
+
+A child of a nested repeater needs one more array level: one array for each parent row. For repeater `1` with child text field `2` and nested repeater `3`, which holds child text field `4`:
+
+```json
+{
+  "form_id": 1,
+  "input_values": {
+    "input_2": ["Reg 1", "Reg 2"],
+    "input_4": [["Guest A", "Guest B"], ["Guest C"]]
+  }
+}
+```
+
+The outer index is the parent row, and the inner index is the nested row. This stores:
+
+```json
+[
+  { "2": "Reg 1", "3": [{ "4": "Guest A" }, { "4": "Guest B" }] },
+  { "2": "Reg 2", "3": [{ "4": "Guest C" }] }
+]
+```
+
+A three-input date child (`dateType` `datefield`, the default, or `datedropdown`) adds one more level: each row is an array of date parts in the order of the date format, e.g. `"input_6": [["01", "02", "2027"], ["03", "04", "2027"]]` for mm/dd/yyyy. A date string or the `.1`/`.2`/`.3` keys return `gf_ability_invalid_repeater_input`.
+
+Children of the outer repeater (`input_2`) stay flat. A flat array on a nested child (`"input_4": ["Guest A", "Guest B", "Guest C"]`) returns `gf_ability_invalid_repeater_input`, because the rows cannot be matched to a parent. Use `forms-get` to confirm assigned child field IDs before building the submission payload.
+
+#### Shapes to avoid
+
+These shapes return `gf_ability_invalid_repeater_input`, because the repeater field ID takes no value of its own:
+
+```json
+{
+  "input_1": [
+    { "2": "Alice" },
+    { "2": "Bob" }
+  ]
+}
+```
+
+```json
+{
+  "input_1": ["Alice", "Bob"]
+}
+```
+
+The first shape is the stored entry format. Use it only with `entries-create` and `entries-update`, keyed by field ID without the `input_` prefix (`"1": [{"2": "Alice"}]`), and expect it back from `entries-get`. Both abilities return `gf_ability_invalid_repeater_input` for any other repeater value, such as a string or a flat list. On `entries-update` the rows you send replace all stored rows; leave the repeater out to keep them.
 
 ## Entry Search
 
@@ -126,6 +226,8 @@ For large result sets:
 ## Bulk Entry Deletion
 
 `entries-delete` supports bulk mode — pass `form_id` instead of `entry_id` to delete all entries for a form server-side.
+
+Passing both `entry_id` and `form_id` is a single delete with a safety check: the entry must belong to that form, or the call is rejected with `gf_ability_form_entry_mismatch` and nothing is deleted. Use the pair when you know the form, so a mixed-up ID can never delete an entry elsewhere.
 
 ### Delete all entries for one form
 
