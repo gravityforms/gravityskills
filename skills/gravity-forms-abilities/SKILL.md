@@ -2,10 +2,10 @@
 name: gravity-forms-abilities
 description: Workflow guidance for AI agents using Gravity Forms abilities via the WordPress Abilities API (MCP). Load this skill when interacting with any gravityforms/* MCP tools — creating/updating forms, managing entries, submitting data, searching entries, managing feeds/notifications, analyzing conditional logic, or querying system info. Provides critical sequencing rules, field configuration knowledge, conditional logic patterns, and pitfall avoidance that tool schemas alone cannot express.
 license: GPL-2.0+
-compatibility: Requires a WordPress site with Gravity Forms 2.9+ and the MCP endpoint enabled (GF Settings → MCP)
+compatibility: Requires a WordPress site with Gravity Forms 3.1+ and the MCP endpoint enabled (GF Settings → MCP)
 metadata:
   author: gravityforms
-  version: "1.0.5"
+  version: "1.1.3"
 ---
 
 # Gravity Forms Abilities — Agent Skill
