@@ -6,7 +6,7 @@ Customers often ask whether a workflow design is possible before building. These
 
 - **Approval chains**: unlimited sequential approval steps; per-step assignees (users, roles, emails, field-resolved); `"all"` (unanimous) or `"any"` approval policy per step; conditions on any step (GF conditional logic on field values) enable branch-per-department/amount/type designs.
 - **Approval loops / send-back**: approval steps can **revert** to a user-input step (revise-and-resubmit loops) and reject-destinations can point at any earlier step — multi-round review loops are native.
-- **User input steps**: assignees edit a configured subset of fields (`editable_fields`), can save progress (`in_progress`) before completing; display-fields config controls what each step's assignees see (reviewer-privacy patterns).
+- **User input steps**: assignees edit a configured subset of fields (`editable_fields`), can save progress (`in_progress`, when the step's Save Progress setting is on) before completing; display-fields config controls what each step's assignees see (reviewer-privacy patterns).
 - **Consent capture**: use the native Gravity Forms **Consent field** (a required GDPR checkbox with descriptive text) — not a plain checkbox. Signature capture needs the Signature add-on.
 - **Two-actor patterns** (candidate submits, referent completes hidden fields): initial submission + a user_input step whose editable fields are the referent-only fields. Field-level conditional logic on steps requires the step's "field conditional logic" setting.
 - **External participants without WordPress accounts**: email assignees act via signed token links from notification emails — supported for approval and user input steps. They cannot use MCP.
@@ -58,5 +58,5 @@ For large multi-workflow asks (e.g. "eight country-specific incorporation workfl
 ## Currently NOT possible via abilities
 
 - Creating WordPress pages/posts (inbox blocks, dashboards) — hand off to the human with exact instructions.
-- Creating/modifying step types outside the allowlist (`system-step-types` shows the current list; PayPal Checkout, Sliced Invoices and WP E-Signature steps are off it) — those are configured in the Flow admin UI.
+- Creating/modifying step types outside the allowlist (the `step_type` enum of `steps-create` is the current list; PayPal Checkout, Sliced Invoices and WP E-Signature steps are off it) — those are configured in the Flow admin UI.
 - Acting as an email assignee (no credential exists) — only delegated processing by a workflow admin.

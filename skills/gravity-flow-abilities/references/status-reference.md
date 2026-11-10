@@ -10,7 +10,7 @@
 | `approved` | Finished; final step was an approval that was approved |
 | `rejected` | Finished; final step was an approval that was rejected |
 
-Key fact (verified against live behavior): on completion, Flow records the **final step's status** as the workflow status. Agents must treat `approved`, `rejected`, and `complete` all as terminal. `current_step` is `null` for any terminal status and also before the workflow starts.
+Key fact (verified against live behavior): on completion, Flow records the status set by the **last step that sets one** (approval steps do; a trailing notification step does not change it) as the workflow status. Agents must treat `approved`, `rejected`, and `complete` all as terminal. `current_step` is `null` for any terminal status and also before the workflow starts.
 
 A rejected approval does not necessarily end the workflow — reject destinations can route to earlier steps or alternate branches. Read `workflow-status-get` after acting rather than assuming.
 
@@ -18,16 +18,16 @@ A rejected approval does not necessarily end the workflow — reject destination
 
 | Value | Meaning |
 |---|---|
-| `queued` | Step not reached yet |
+| `queued` | Step reached, waiting for its schedule |
 | `pending` | Step active, waiting on assignees |
 | `complete` | Step finished (user input completed, notification sent, feed processed…) |
 | `approved` / `rejected` | Approval step outcome |
 | `revert` | Approval reverted to a user-input step for changes |
-| `cancelled` | Step was skipped (workflow-send-to-step) or the workflow was cancelled while it was active |
+| `cancelled` | The entry left the step through workflow-send-to-step |
 
 ## Per-assignee statuses
 
-Within a pending step, each assignee has their own status (`pending`, `approved`, `rejected`, `complete`). Multi-assignee approval steps combine them by policy — `workflow-status-get`'s `current_step.approval_policy` states it directly: `"all"` (unanimous — every assignee must act; one approval with the step still pending is normal, name who is still pending) or `"any"` (first decision wins). The live list is `assignees[] { key, display_name, status }`.
+Within a pending step, each assignee has their own status (`pending`, `approved`, `rejected`, `complete`). Multi-assignee approval steps combine them by policy — `workflow-status-get`'s `current_step.approval_policy` states it directly: `"all"` (unanimous — every assignee must approve, and one rejection decides the step at once; a role is one assignee, any member can act for it; one approval with the step still pending is normal, name who is still pending) or `"any"` (first decision wins). The live list is `assignees[] { key, display_name, status }`.
 
 This policy is a **configurable step setting**, not a fixed law. If a workflow is stuck because it demands unanimous approval and the user wants any-one-approves instead (or vice versa), that is a `steps-update` on the step's approval settings — surface it as the real remedy (or a decision point to confirm), rather than only restarting/re-notifying to chase the missing approvals.
 
@@ -45,7 +45,7 @@ Step *configurations* may also use field-resolved types (`assignee_field`, `assi
 
 **Email assignees** act through signed token links embedded in notification emails. They never authenticate to WordPress, so no MCP credential corresponds to them. An agent cannot act *as* an email assignee — only a workflow admin can act *on behalf of* one via delegated `steps-process` with `assignee_key: "email|..."`. Find those pending entries with `status-search { assignee_key: "email|a@b.com" }` (view-all). Do **not** expect them in `inbox-list { user_id }` even when that WordPress user's account email is the same address. Field-resolved user and role assignees (`assignee_field`, `assignee_user_field`, `assignee_role_field`) **are** included once they resolve to `user_id|…` or `role|…`.
 
-**"Their link doesn't work" playbook** — always cover all three parts: (1) explain the model — email assignees act via the signed link in their notification, not by logging in, and links are entry+step+assignee-specific and can expire or be superseded; (2) verify with `workflow-status-get` that the step is still pending and they are still a listed assignee (if the step moved on, the old link is dead by design); (3) remediate with `steps-restart` (admin) to re-send a fresh token link — or delegated `steps-process` if the admin should act for them. Also check the step's notification message actually contains `{workflow_entry_link}` pointed at a front-end inbox: `{workflow_entry_link: page_id='N'}`. Confirm `N` from the request, sibling steps, or `system-info` `default_pages.inbox` (null means Workflow → Settings Inbox is unset and a bare merge tag falls back to `/wp-admin/admin.php?page=gravityflow-inbox`, which email assignees cannot use).
+**"Their link doesn't work" playbook** — always cover all three parts: (1) explain the model — email assignees act via the signed link in their notification, not by logging in, and a link identifies the assignee and entry and can expire or be revoked (an approve/reject action link is also bound to the step); (2) verify with `workflow-status-get` that the step is still pending and they are still a listed assignee (if the step moved on, there is nothing for them to act on); (3) remediate with `steps-restart` (admin) to re-send a fresh token link — or delegated `steps-process` if the admin should act for them. Also check the step's notification message actually contains `{workflow_entry_link}` pointed at a front-end inbox: `{workflow_entry_link: page_id='N'}`. Confirm `N` from the request, sibling steps, or `system-info` `default_pages.inbox` (null means the setting is unset or does not point at a published page; then a bare merge tag falls back to `/wp-admin/admin.php?page=gravityflow-inbox`, which email assignees cannot use).
 
 ## Workflow entry meta keys (escape hatch)
 
@@ -59,7 +59,7 @@ When `status-search` filters aren't expressive enough, these meta keys work as `
 | `workflow_user_id_{user_id}` | Per-assignee status when user {id} is/was an assignee |
 | `workflow_role_{role}` | Per-assignee status for a role assignee |
 | `workflow_email_{email}` | Per-assignee status for an email assignee |
-| `workflow_timestamp` | Unix timestamp the current step started |
+| `workflow_timestamp` | Unix timestamp of the last workflow update, normally when the current step started |
 
 Example — all entries stuck on step 41 in form 3:
 
@@ -78,7 +78,7 @@ Note: GF's `entries-search` takes `form_ids` (an array), not `form_id`.
 
 Per-assignee meta (`workflow_user_id_{n}`, `workflow_role_{role}`, `workflow_email_{email}`) can remain `pending` after the workflow is cancelled or otherwise finished, when assignee purge did not run. Pair those keys with `workflow_final_status` = `pending` (or pass `status: "pending"` to `status-search`) so the result is in-flight only. Inbox-list follows the same leftover-meta behavior: a row with `step_id` 0 has no current step.
 
-Example — everything user 7 has ever approved on form 3:
+Example — entries whose current assignee record shows user 7 approved, on form 3 (assignee records are removed when a step ends, so this is not a full history; use `activity-list` for that):
 
 ```json
 {
