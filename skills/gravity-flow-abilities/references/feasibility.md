@@ -58,5 +58,5 @@ For large multi-workflow asks (e.g. "eight country-specific incorporation workfl
 ## Currently NOT possible via abilities
 
 - Creating WordPress pages/posts (inbox blocks, dashboards) — hand off to the human with exact instructions.
-- Creating/modifying step types outside the allowlist — those are configured in the Flow admin UI. 
+- Creating/modifying step types outside the allowlist (`system-step-types` shows the current list; PayPal Checkout, Sliced Invoices and WP E-Signature steps are off it) — those are configured in the Flow admin UI.
 - Acting as an email assignee (no credential exists) — only delegated processing by a workflow admin.

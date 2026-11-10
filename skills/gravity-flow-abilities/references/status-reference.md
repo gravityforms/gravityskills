@@ -41,7 +41,7 @@ This policy is a **configurable step setting**, not a fixed law. If a workflow i
 | `role|approver` | Every user with the role |
 | `email|pat@example.com` | An email address (may have no WP account) |
 
-Step *configurations* may also use field-resolved types (`assignee_field`, `assignee_user_field`, `email_field`) that resolve per entry at runtime — which is why `steps-get` shows configured assignees but only `workflow-status-get` shows an entry's actual ones.
+Step *configurations* may also use field-resolved types (`assignee_field`, `assignee_user_field`, `assignee_multi_user_field`, `assignee_role_field`, `email_field` — see Flow Field Types in SKILL.md) that resolve per entry at runtime — which is why `steps-get` shows configured assignees but only `workflow-status-get` shows an entry's actual ones.
 
 **Email assignees** act through signed token links embedded in notification emails. They never authenticate to WordPress, so no MCP credential corresponds to them. An agent cannot act *as* an email assignee — only a workflow admin can act *on behalf of* one via delegated `steps-process` with `assignee_key: "email|..."`. Find those pending entries with `status-search { assignee_key: "email|a@b.com" }` (view-all). Do **not** expect them in `inbox-list { user_id }` even when that WordPress user's account email is the same address. Field-resolved user and role assignees (`assignee_field`, `assignee_user_field`, `assignee_role_field`) **are** included once they resolve to `user_id|…` or `role|…`.
 

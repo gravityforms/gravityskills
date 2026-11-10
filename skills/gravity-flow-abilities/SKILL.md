@@ -26,7 +26,7 @@ metadata:
 
 **Unstick (admin)** → `steps-restart` (mildest), `workflow-send-to-step`, `workflow-restart`, `workflow-cancel`
 
-**Step configuration (read)** → `steps-list` (a form's steps, summary shape; optional `entry_id` adds per-entry statuses, omits `workflow_complete` , which still exists and stays last), `steps-get` (one step's stored settings for allowlisted types; a step of another type returns the summary only. A secret value is returned as `[redacted]` — never send `[redacted]` back in an update; ask the user for the real value)
+**Step configuration (read)** → `steps-list` (a form's steps, summary shape; optional `entry_id` adds per-entry statuses, omits `workflow_complete`, which still exists and stays last), `steps-get` (one step's stored settings for allowlisted types; a step of another type returns the summary only. A secret value is returned as `[redacted]` — never send `[redacted]` back in an update; ask the user for the real value)
 
 **Build (write)** → `system-step-type-schema` (settings schema for one type — call FIRST), `steps-create`, `steps-order` (place one step immediately after another), `steps-update` (partial merge; also toggles `is_active` to deactivate/reactivate a step — the reversible alternative to delete), `steps-delete`
 
@@ -34,7 +34,7 @@ metadata:
 
 All ability names use format `gravityflow/{area}-{action}`; as MCP tools they appear hyphenated (`gravityflow-inbox-list`) on Gravity Forms' endpoint, alongside the `gravityforms-*` tools.
 
-**Step writes are allowlisted:** `approval`, `user_input`, `notification`, `choice_routing`, and simple feed add-on steps can be created or modified programmatically (`steps-create` / `steps-update`). A simple feed step only selects existing feeds of that add-on (`settings.feed_{id}`); how the feed was created is immaterial. Types that add their own settings or process behavior (`zapier`, `salesforce`, `twilio`, `paypal_checkout_capture`, `post_update`, `slicedinvoices`, `wp-e-signature`) return an error naming the allowlist — configure those in the Flow admin UI. `workflow_start` / `workflow_complete` are auto-managed sentinels and cannot be created, updated, deleted, or moved. `steps-order` does not change step settings: it can place any other step after `workflow_start`; `workflow_complete` stays last. Pass `workflow_start` as `after_step_id` to put a step first. Never attempt to create or modify workflow steps via `gravityforms/feeds-*` — Flow actively refuses generic feed tools targeting its steps and redirects you to `gravityflow/steps-*`.
+**Step writes are allowlisted.** Each step type declares its own support; `system-step-types` and `system-step-type-schema` show the current list on this site. `approval`, `user_input`, `notification`, `choice_routing` and `update_user` are always on it. A feed add-on step type is on it while its add-on is installed and active: the step selects existing feeds of that add-on (`settings.feed_{id}`); how the feed was created is immaterial. `post_update`, `salesforce`, `twilio` and `zapier` are on the list with their extra settings. `paypal_checkout_capture`, `slicedinvoices` and `wp-e-signature` are not; configure those in the Flow admin UI. A refused type returns an error naming the current list. An `update_user` step also needs the `edit_users` capability for `steps-get` (settings), `steps-update` and `steps-delete`. `workflow_start` / `workflow_complete` are auto-managed sentinels and cannot be created, updated, deleted, or moved. `steps-order` does not change step settings: it can place any other step after `workflow_start`; `workflow_complete` stays last. Pass `workflow_start` as `after_step_id` to put a step first. Never attempt to create or modify workflow steps via `gravityforms/feeds-*` — Flow actively refuses generic feed tools targeting its steps and redirects you to `gravityflow/steps-*`.
 
 ## Division of Labor: Flow vs Forms
 
@@ -58,6 +58,8 @@ Gravity Forms is the MCP host; Flow contributes its tools to GF's endpoint. Ever
 **Read-only group** (each opt-in): `inbox-list`, `inbox-count`, `status-search`, `workflow-status-get`, `timeline-get`, `steps-list`, `steps-get`, `system-info`, `system-step-types`, `system-step-type-schema`, `reports-get`, `activity-list`
 
 **Write & destructive group** (each opt-in): `timeline-note-add`, `steps-process`, `steps-restart`, `workflow-send-to-step`, `workflow-restart`, `workflow-cancel`, `steps-create`, `steps-update`, `steps-order`, `steps-delete`
+
+A tool added by a Flow update starts off and must be enabled the same way. The step type list of `steps-create` is read when the tools register, so after an add-on is activated or deactivated, reconnect the MCP client to see the new list.
 
 If a tool is absent from discovery or a call is permission-denied, the admin has not enabled that specific tool (or Gravity Forms' MCP is off), or your user lacks the capability. Do not attempt workarounds — tell the user to enable the exact tool in Forms → Settings → MCP (the Gravity Flow metabox), or which capability is missing.
 
@@ -116,7 +118,7 @@ Only conclude "not discoverable" after the accessible routes are exhausted, and 
 
 **Confirmation echo-back:** `workflow-cancel` requires `confirmation: "CANCEL WORKFLOW {entry_id}"`; `workflow-restart` requires `confirmation: "RESTART WORKFLOW {entry_id}"`. On a mismatch the error returns the exact expected phrase — echo it back precisely. Always confirm with the human before these operations.
 
-**Confirmation phrases are NOT self-authorization.** The echo-back exists so a human's "yes" gates the action — it is not a formality you satisfy on your own. Never construct and send a destructive confirmation in the same breath as discovering the operation; the user must have explicitly asked for THIS specific destructive action first. If they have not, stop and state exactly what you would do and what confirmation you need. This applies to every destructive tool: `workflow-cancel`, `workflow-restart`, `steps-delete`, `step-order` and `steps-process` rejections/reverts.
+**Confirmation phrases are NOT self-authorization.** The echo-back exists so a human's "yes" gates the action — it is not a formality you satisfy on your own. Never construct and send a destructive confirmation in the same breath as discovering the operation; the user must have explicitly asked for THIS specific destructive action first. If they have not, stop and state exactly what you would do and what confirmation you need. This applies to every destructive tool: `workflow-cancel`, `workflow-restart`, `steps-delete`, `steps-order` and `steps-process` rejections/reverts.
 
 **Never use writes to discover.** Do not reject, delete, cancel, or restart anything to "find out" how a step is configured or what a validation rule is — that mutates real workflows and real entries. Discovery is always read-only: `steps-list`, `steps-get`, `system-step-type-schema`, `workflow-status-get`, `status-search`. If a config read is permission-denied, report that; do not substitute a destructive probe.
 
@@ -141,13 +143,15 @@ There is no reassign ability. For steps whose assignees resolve from an entry fi
 1. `gravityforms/entries-update { "entry": { "id": 787, "3": "pat@newco.com" } }` — the entry ID goes INSIDE the entry object; set the assignee field (here field 3) to the new user/email
 2. `gravityflow/steps-restart { entry_id }` — re-resolves assignees from the updated field and re-sends notifications (email assignees get a fresh token link)
 
-This is the ONE sanctioned exception to "don't edit workflow fields mid-step," and it only works for field-resolved assignees. For steps with fixed user/role assignees, the step configuration itself must change — not yet possible via MCP; direct the user to the step settings screen.
+This is the ONE sanctioned exception to "don't edit workflow fields mid-step," and it only works for field-resolved assignees. For steps with fixed user/role assignees, change the step configuration with `steps-update { step_id, assignees }` — that reroutes every in-flight entry on the step and needs the count-bearing confirmation (see the build playbook).
 
 ### Building workflow steps
 
 **Build it — don't just describe it.** When asked to set up a workflow, actually create the steps; do not stop at a design and ask permission to proceed. If a detail you genuinely can't know blocks *one* setting — the exact user/role to assign, a real URL — still build the full structure with a defensible placeholder (the closest matching `role|…`, or a clearly-named stand-in) and hand off ONLY that specific detail, with the exact `steps-update` call that finalizes it. Producing a plan while creating nothing fails a build request. (This is different from a pure *feasibility* question — see below — where you answer and mutate nothing.)
 
-1. `system-step-type-schema { step_type, form_id }` — the settings vocabulary for the type. The output has `first_class_inputs` (the top-level inputs this type accepts), `settings` (one descriptor per setting, listing only the properties that have a value) and `row_shapes` (the shape of each row of a list setting, such as routing rules). **Unknown settings keys are rejected on create/update (nothing saves), so never guess keys.** A first-class input the type does not have — `assignees` on a notification or choice-routing step — is refused with `gravityflow_step_input_not_supported`; put the value in `settings` instead.
+1. `system-step-type-schema { step_type, form_id }` — the settings vocabulary for the type. The output has `first_class_inputs` (the top-level inputs this type accepts), `settings` (one descriptor per setting, listing only the properties that have a value) and `row_shapes` (the shape of each row of a list setting, such as routing rules). **Unknown settings keys are rejected on create/update (nothing saves), so never guess keys.** A first-class input the type does not have — `assignees` on a notification or choice-routing step — is refused with `gravityflow_step_input_not_supported`; put the value in `settings` instead. The `update_user` schema is large (about 100 KB) — request it only when you build that type.
+   **Feed add-on steps:** the schema lists one `feed_{id}` checkbox per existing feed of that add-on on the form; `settings: { "feed_{id}": "1" }` selects it. Create the feed first with `gravityforms/feeds-create`. A Zapier step selects feeds of another form through `zapier_form`; to switch forms on `steps-update`, send the new `zapier_form` and a feed of that form and do not resend the old feed key.
+   **Mapping rows** (Salesforce, Zapier, Post Update, Twilio): a row's `key` must be one of the schema's key choices, or `gf_custom` with the text in `custom_key`; a row's `value` must be a choice of that key (the schema's `value.choices`), or `gf_custom` with the text in `custom_value`. A raw key or a value that is not a choice is refused with `Invalid field mapping`, naming it.
 2. `steps-create { form_id, step_type, step_name, assignees, destination_complete, condition, settings }` — first-class inputs cover the common cases; everything else goes in `settings`. Assignees use `type|id` keys; the internal assignee-source discriminator is handled for you. New steps append to the end of the workflow. Conditions are GF conditional-logic objects (`{actionType, logicType, rules}`) gating whether the step runs. For `choice_routing`, `routing_field` is a choice field of the form and `routing_rules` map choice values to a target step ID or `complete`; the rule shape is in `row_shapes`.
    A validation error has the code `gravityflow_step_settings_invalid`; `data.fields` maps each setting key to its message, and an unknown key keeps the name you sent. Nothing was saved — fix each named setting and retry.
 3. Verify with `steps-list` — check order and destinations.
@@ -201,6 +205,19 @@ Full detail in [references/processing.md](references/processing.md). The essenti
 
 Full vocabulary, per-assignee meta, and the entries-search escape hatch: [references/status-reference.md](references/status-reference.md).
 
+## Flow Field Types
+
+Flow adds form fields that feed workflows. `gravityforms/system-field-types` lists them; this is what they store and how a step uses them:
+
+- **User** (`workflow_user`): stores one WordPress user ID. As a step assignee source it is `assignee_user_field|{field_id}` and resolves to `user_id|{value}`.
+- **Role** (`workflow_role`): stores one role slug. Assignee source `assignee_role_field|{field_id}`, resolves to `role|{value}`.
+- **Assignee Select** (`workflow_assignee_select`): stores one full key (`user_id|5`, `role|editor`, …). Assignee source `assignee_field|{field_id}`, resolves to the stored key.
+- **Multi User** (`workflow_multi_user`): stores a JSON array of user IDs. Assignee source `assignee_multi_user_field|{field_id}`, resolves to one `user_id|…` assignee per ID.
+- **Email** (a Gravity Forms email field): assignee source `email_field|{field_id}`, resolves to `email|{address}` — a token-link actor, see Status Vocabulary.
+- **Discussion** (`workflow_discussion`): a threaded note field for user input steps; it stores a JSON list of timestamped comments and is not an assignee source.
+
+Field-resolved assignees resolve per entry when the step starts. `steps-get` shows the source key; `workflow-status-get` shows who it resolved to. The reassignment recipe above works for all of them.
+
 ## Key Pitfalls
 
 | Mistake | Consequence | Prevention |
@@ -221,6 +238,9 @@ Full vocabulary, per-assignee meta, and the entries-search escape hatch: [refere
 | Tool absent from discovery | Admin hasn't enabled that tool (or GF's MCP is off) | Point to Forms → Settings → MCP (Gravity Flow metabox); no workarounds |
 | Building/modifying steps via `gravityforms/feeds-*` | Actively refused by Flow | Use `gravityflow/steps-create` / `steps-update` / `steps-order` / `steps-delete` |
 | Guessing settings keys on steps-create/update | Unknown keys rejected, nothing saved | Call `system-step-type-schema` first |
+| A mapping row with a raw field ID as `key`, or a free text `value` | Refused with `Invalid field mapping` | Use a key choice or `gf_custom` + `custom_key`; a value choice or `gf_custom` + `custom_value` |
+| A feed step type missing from `steps-create` after an add-on activation | The type list was read when the tools registered | Reconnect the MCP client |
+| `steps-get` / `steps-update` on an `update_user` step returns `gravityflow_ability_step_capability_required` | That step type needs `edit_users` | Name the capability; do not retry |
 | Using `submitter` (or a bare string) as a notification recipient | Silently stored, emails no one — recipients aren't always validated | Route to the submission's `email_field|{id}` / `email|{address}`; verify the recipient resolves |
 | Updating assignees on a step with in-flight entries without warning the user | Every in-flight entry is rerouted and re-notified | Echo the count-bearing confirmation only after the user confirms the blast radius |
 | Reordering steps on a form with pending entries without the count-bearing phrase | A destination of `next` follows the new order for those entries | Echo `REORDER STEP {id} AFTER {after_id} AFFECTING {n} ENTRIES` when the user already asked for this move, or after they confirm the blast radius |
