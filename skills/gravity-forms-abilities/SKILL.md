@@ -371,7 +371,7 @@ For CL structure details, operators, and common patterns, see [references/condit
 | `system-field-types` does not list rating/survey-style fields | The required add-on is not active on this site | Call `system-info` to check active add-ons; fall back to core fields (`radio`, `select`, `checkbox`) when add-on types are unavailable |
 | `entries-update` with only status/metadata | Older bridge versions could wipe omitted field values | Safest pattern is still fetch → merge → update when changing existing entries |
 | `entries-create` date field given in the wrong format | Searches may miss the entry later | Prefer the form's configured date format; ISO is only safe if the bridge explicitly normalizes it |
-| Managing Gravity Flow workflow steps with `feeds-*` | Refused with `gf_ability_feed_protected`; the steps are not in `feeds-list` | Use `gravityflow/steps-list`, `steps-get`, `steps-create`, `steps-update`, `steps-delete` |
+| Managing Gravity Flow workflow steps with `feeds-*` | Refused with `gf_ability_feed_protected`; the steps are not in `feeds-list` | Use `gravityflow/steps-list`, `steps-get`, `steps-create`, `steps-update`, `steps-order`, `steps-delete` |
 | "First/last name side by side" using a compound `name` field + layout grid | The `name` field already renders its sub-inputs (Prefix/First/Last/Suffix) in a row internally — adding `layoutGridColumnSpan` controls the whole block's width, not individual sub-inputs | When the user wants "first name and last name side by side," use **two separate `text` fields** with shared `layoutGroupId` and span `6`, not a single compound `name` field. Use the compound `name` field only when you want the full name widget (prefix/first/last/suffix). |
 
 ## Field Configuration Quick Reference
