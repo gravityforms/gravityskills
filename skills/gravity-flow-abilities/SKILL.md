@@ -5,7 +5,7 @@ license: GPL-2.0+
 compatibility: Requires Gravity Forms as the MCP host (MCP enabled under Forms → Settings → MCP, with Gravity Flow's tools enabled in its metabox) and Gravity Flow 3.2+ contributing its abilities to that endpoint
 metadata:
   author: gravityforms
-  version: "0.3.0"
+  version: "0.4.0"
 ---
 
 # Gravity Flow Abilities — Agent Skill
@@ -153,6 +153,9 @@ This is the ONE sanctioned exception to "don't edit workflow fields mid-step," a
    **Feed add-on steps:** the schema lists one `feed_{id}` checkbox per active feed of that add-on on the form; `settings: { "feed_{id}": "1" }` selects it. Create the feed first with `gravityforms/feeds-create`. A Zapier step selects feeds of another form through `zapier_form`; to switch forms on `steps-update`, send the new `zapier_form` and a feed of that form and do not resend the old feed key.
    **Mapping rows** (Salesforce, Zapier, Post Update, Twilio): a row's `key` must be one of the schema's key choices, or `gf_custom` with the text in `custom_key`; a row's `value` must be a choice of that key when the schema lists choices for it (`value.choices`), or `gf_custom` with the text in `custom_value`; a key without value choices takes text. A raw key or a value that is not one of the listed choices is refused with `Invalid field mapping`, naming it.
 2. `steps-create { form_id, step_type, step_name, assignees, destination_complete, condition, settings }` — first-class inputs cover the common cases; everything else goes in `settings`. Assignees use `type|id` keys; the internal assignee-source discriminator is handled for you. New steps append to the end of the workflow. Conditions are GF conditional-logic objects (`{actionType, logicType, rules}`) gating whether the step runs. For `choice_routing`, `settings.routing_field` is a dropdown or radio field of the form and `settings.routing_rules` map choice values to `next`, a target step ID or `complete`; the rule shape is in `row_shapes`.
+   **Choice Routing vs step condition.** Default to a step `condition`. Create a `choice_routing` step when the cases below are strong fit — not as the generic branching tool.
+   - **Use a step `condition`** when skipping an optional stretch of the process, put condition on each steps to be skipped in sequential order.
+   - **Use `choice_routing`** when dropdown/radio values can be used to selects among more than 2 next steps, or when the two destinations are far apart in the workflow and every intermediate step in the workflow would otherwise need the same condition to skip.
    A validation error has the code `gravityflow_step_settings_invalid`; `data.fields` maps each setting key to its message, and an unknown key keeps the name you sent. Nothing was saved — fix each named setting and retry.
 3. Verify with `steps-list` — check order and destinations.
 4. `steps-update { step_id, ... }` — partial merge; a step's type is immutable. **When entries are in flight on the step, a change of settings is blocked until you echo `UPDATE STEP {id} AFFECTING {n} ENTRIES`** (an `is_active` change alone needs no phrase; a settings error is reported before the phrase is requested) — and changing assignee settings or routing conditions re-resolves the assignees of ALL of those entries (new assignees are added as pending, removed ones are dropped; the assignee notification is not sent again). If the user's request itself already specifies the change ("assign it to the finance role"), that IS the authorization — echo the count-bearing confirmation and proceed, reporting the blast radius in your summary. Only stop to confirm when the request leaves the decision open or the in-flight impact plainly exceeds what the user described.
@@ -238,6 +241,7 @@ Field-resolved assignees resolve per entry when the step starts. `steps-get` sho
 | Tool absent from discovery | Admin hasn't enabled that tool (or GF's MCP is off) | Point to Forms → Settings → MCP (Gravity Flow metabox); no workarounds |
 | Building/modifying steps via `gravityforms/feeds-*` | Actively refused by Flow | Use `gravityflow/steps-create` / `steps-update` / `steps-order` / `steps-delete` |
 | Guessing settings keys on steps-create/update | Unknown keys rejected, nothing saved | Call `system-step-type-schema` first |
+| Creating a `choice_routing` step to skip an optional stretch or to choose between 1–2 destinations | Extra auto-run step, destinations to maintain, Conditional logic still needed on skipped steps | Put `condition` on the steps that should run or skip |
 | A mapping row with a raw field ID as `key`, or a free text `value` | Refused with `Invalid field mapping` | Use a key choice or `gf_custom` + `custom_key`; a value choice or `gf_custom` + `custom_value` |
 | A feed step type missing from `steps-create` after an add-on activation | The type list was read when the tools registered | Reconnect the MCP client |
 | `steps-get` on an `update_user` step returns the summary without settings; `steps-update` / `steps-delete` return `gravityflow_ability_step_capability_required` | That step type needs `edit_users` | Name the capability; do not retry |
