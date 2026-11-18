@@ -9,23 +9,23 @@
 | `entry_id` | Required |
 | `status` | Required — see per-type table below |
 | `note` | Optional in general; REQUIRED when the step config demands one for the status (common on reject/revert), and ALWAYS required for delegated calls. Include one anyway — approvals without context make poor audit trail |
-| `field_values` | user_input steps only; `input_{field_id}` / `input_{field_id}.{sub}` keys |
-| `assignee_key` | Delegation (`type|id`); requires workflow-admin permission + `note` |
+| `field_values` | `input_{field_id}` / `input_{field_id}_{sub}` keys; only fields the step lists as editable for the acting assignee (user input steps, and approval steps with editable fields) |
+| `assignee_key` | Delegation (`user_id|…`, `role|…`, or `email|…`); requires workflow-admin permission + `note`. `email|…` is the runtime key after `email_field` resolves, not a steps-create setting |
 
 ## Valid status by step type
 
 | Step type | Statuses | Notes |
 |---|---|---|
 | `approval` | `approved`, `rejected`, `revert` | `revert` only when the step has reverting enabled — it sends the entry back to a designated user-input step without recording a rejection |
-| `user_input` | `complete`, `in_progress` | `in_progress` saves `field_values` without completing the step |
-| anything else | — | `operation_not_supported`. Notification/webhook/feed steps complete autonomously; if one is stuck, use `steps-restart` / `workflow-send-to-step` |
+| `user_input` | `complete`, `in_progress` | `in_progress` saves `field_values` without completing the step; needs the step's Save Progress setting, else `in_progress_disabled` |
+| anything else | — | `gravityflow_ability_operation_not_supported`. Notification/webhook/feed steps complete autonomously; if one is stuck, use `steps-restart` / `workflow-send-to-step` |
 
 `system-step-types` reports a `processable` flag per type — check it when unsure.
 
 ## Authorization
 
 - **As self:** authenticated user must be a *pending* assignee on the current step (directly, via role, or via a field that resolved to them). Same rule as the web inbox.
-- **Delegated (`assignee_key`):** requires workflow-admin permission. The key must resolve to a *pending* assignee on the current step. `note` is required. The result is dual-attributed:
+- **Delegated (`assignee_key`):** requires workflow-admin permission (`gravityflow_admin_actions`, not `gravityflow_status_view_all`). The key must resolve to a *pending* assignee on the current step — `user_id|…`, `role|…`, or `email|…`. A role-only inbox row is processed as `role|{slug}`, not as the covering user's `user_id`. `note` is required. The result is dual-attributed:
   - Timeline note: attributed to the acting admin, body prefixed `[On behalf of {display_name} ({key})]`
   - Activity feed: a `delegated` assignee event (acting admin in `display_name`, acted-for assignee in `assignee_key`) alongside the normal status event
 
@@ -35,7 +35,7 @@ User-input steps declare which fields assignees may edit. `field_values` is vali
 
 - Keys must match `input_{field_id}` or `input_{field_id}.{sub}` / `input_{field_id}_{sub}` for compound fields
 - Every referenced field must be in the step's editable list — otherwise the call fails with an error naming the editable field IDs, and nothing is saved
-- Approval steps accept no `field_values` at all
+- Approval steps accept `field_values` only for their configured editable fields
 
 To know the editable fields in advance: `steps-get` on the current step. Value formats follow Gravity Forms conventions (see the gravity-forms-abilities skill's field-config reference).
 
@@ -61,8 +61,8 @@ After processing, trust this response over assumptions — reject destinations a
 
 | Error | Meaning | Agent response |
 |---|---|---|
-| `operation_not_supported` | Current step type is not processable | Use the unstick ladder (steps-restart / send-to-step), not repeated processing |
-| `assignee_already_processed` | This assignee already acted on this step | Done — do not retry; check `workflow-status-get` for current state |
+| `gravityflow_ability_operation_not_supported` | Current step type is not processable | Use the unstick ladder (steps-restart / send-to-step), not repeated processing |
+| `gravityflow_ability_not_pending_assignee` (self) / `invalid_assignee` (delegated) | This assignee already acted on this step, or is not on it | Done — do not retry; check `workflow-status-get` for current state |
 | `gravityflow_ability_validation_failed` | Names each concrete failure (e.g. "note: A note is required") | Retry the same call with the missing/corrected values |
 | `gravityflow_ability_field_not_editable` | `field_values` touched a non-editable field; error names the editable IDs | Resend with only listed fields; report the rest to the user |
 | `gravityflow_ability_not_pending_assignee` | You are not a pending assignee on the current step | Check `workflow-status-get` assignees; do not escalate on your own |

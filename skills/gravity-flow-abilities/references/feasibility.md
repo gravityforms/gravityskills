@@ -4,14 +4,17 @@ Customers often ask whether a workflow design is possible before building. These
 
 ## Core workflow capabilities
 
-- **Approval chains**: unlimited sequential approval steps; per-step assignees (users, roles, emails, field-resolved); `"all"` (unanimous) or `"any"` approval policy per step; conditions on any step (GF conditional logic on field values) enable branch-per-department/amount/type designs.
+- **Approval chains**: unlimited sequential approval steps; per-step assignees (users, roles, field-resolved); `"all"` (unanimous) or `"any"` approval policy per step.
 - **Approval loops / send-back**: approval steps can **revert** to a user-input step (revise-and-resubmit loops) and reject-destinations can point at any earlier step — multi-round review loops are native.
-- **User input steps**: assignees edit a configured subset of fields (`editable_fields`), can save progress (`in_progress`) before completing; display-fields config controls what each step's assignees see (reviewer-privacy patterns).
+- **User input steps**: assignees edit a configured subset of fields (`editable_fields`), can save progress (`in_progress`, when the step's Save Progress setting is on) before completing; display-fields config controls what each step's assignees see (reviewer-privacy patterns).
+- **Choice Routing**: a step that sends the entry to a next step based on the submitted value of a dropdown or radio field. Ideally suited when one field selects among 3+ next steps, or when destination steps are far apart in workflow and every intermediate step would otherwise need the same condition. Not a substitute for a step condition on an optional skip or fewer than 3 destinations (https://docs.gravityflow.io/choice-routing-step/).
 - **Consent capture**: use the native Gravity Forms **Consent field** (a required GDPR checkbox with descriptive text) — not a plain checkbox. Signature capture needs the Signature add-on.
 - **Two-actor patterns** (candidate submits, referent completes hidden fields): initial submission + a user_input step whose editable fields are the referent-only fields. Field-level conditional logic on steps requires the step's "field conditional logic" setting.
 - **External participants without WordPress accounts**: email assignees act via signed token links from notification emails — supported for approval and user input steps. They cannot use MCP.
+- **Step conditions**: GF conditional logic on any step gates whether that step runs. Use them to skip specific steps based on 
+previous step completion or entry field values (https://docs.gravityflow.io/condition/). If a choice field value would drive next step for more than 2 destination steps, a Choice Routing step may be a better fit.
 - **Scheduling/delays**: steps can be scheduled (delay after previous step, or date/date-field based). Expiration with destinations handles "no response by X" routing; resend settings handle reminders.
-- **Notifications**: per-step assignee notifications plus approval/rejection/complete notifications, all templatable with merge tags; `{workflow_entry_link}` is the assignee's action link — REQUIRED for email assignees to act.
+- **Notifications**: per-step assignee notifications plus approval/rejection/complete notifications, all templatable with merge tags; `{workflow_entry_link}` is the assignee's action link — REQUIRED for email assignees to act, and it must resolve to a **front-end** inbox page (`{workflow_entry_link: page_id='N'}` or Workflow → Settings Inbox). A bare tag with Inbox unset becomes `/wp-admin/admin.php?page=gravityflow-inbox`, which email assignees cannot use.
 
 ## Integrations (verify the add-on is installed before promising)
 
@@ -58,5 +61,5 @@ For large multi-workflow asks (e.g. "eight country-specific incorporation workfl
 ## Currently NOT possible via abilities
 
 - Creating WordPress pages/posts (inbox blocks, dashboards) — hand off to the human with exact instructions.
-- Creating/modifying step types outside the allowlist (approval, user_input, notification, choice_routing) — feed-addon and other routing steps are configured in the Flow admin UI.
+- Creating/modifying step types outside the allowlist (the `step_type` enum of `steps-create` is the current list; PayPal Checkout, Sliced Invoices and WP E-Signature steps are off it) — those are configured in the Flow admin UI.
 - Acting as an email assignee (no credential exists) — only delegated processing by a workflow admin.
