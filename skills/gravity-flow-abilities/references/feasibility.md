@@ -4,7 +4,7 @@ Customers often ask whether a workflow design is possible before building. These
 
 ## Core workflow capabilities
 
-- **Approval chains**: unlimited sequential approval steps; per-step assignees (users, roles, emails, field-resolved); `"all"` (unanimous) or `"any"` approval policy per step.
+- **Approval chains**: unlimited sequential approval steps; per-step assignees (users, roles, field-resolved); `"all"` (unanimous) or `"any"` approval policy per step.
 - **Approval loops / send-back**: approval steps can **revert** to a user-input step (revise-and-resubmit loops) and reject-destinations can point at any earlier step — multi-round review loops are native.
 - **User input steps**: assignees edit a configured subset of fields (`editable_fields`), can save progress (`in_progress`, when the step's Save Progress setting is on) before completing; display-fields config controls what each step's assignees see (reviewer-privacy patterns).
 - **Choice Routing**: a step that sends the entry to a next step based on the submitted value of a dropdown or radio field. Ideally suited when one field selects among 3+ next steps, or when destination steps are far apart in workflow and every intermediate step would otherwise need the same condition. Not a substitute for a step condition on an optional skip or fewer than 3 destinations (https://docs.gravityflow.io/choice-routing-step/).

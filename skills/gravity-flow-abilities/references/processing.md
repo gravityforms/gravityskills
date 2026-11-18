@@ -10,7 +10,7 @@
 | `status` | Required — see per-type table below |
 | `note` | Optional in general; REQUIRED when the step config demands one for the status (common on reject/revert), and ALWAYS required for delegated calls. Include one anyway — approvals without context make poor audit trail |
 | `field_values` | `input_{field_id}` / `input_{field_id}_{sub}` keys; only fields the step lists as editable for the acting assignee (user input steps, and approval steps with editable fields) |
-| `assignee_key` | Delegation (`user_id|…`, `role|…`, or `email|…`); requires workflow-admin permission + `note` |
+| `assignee_key` | Delegation (`user_id|…`, `role|…`, or `email|…`); requires workflow-admin permission + `note`. `email|…` is the runtime key after `email_field` resolves, not a steps-create setting |
 
 ## Valid status by step type
 

@@ -5,7 +5,7 @@ license: GPL-2.0+
 compatibility: Requires Gravity Forms as the MCP host (MCP enabled under Forms → Settings → MCP, with Gravity Flow's tools enabled in its metabox) and Gravity Flow 3.2+ contributing its abilities to that endpoint
 metadata:
   author: gravityforms
-  version: "0.4.0"
+  version: "0.4.1"
 ---
 
 # Gravity Flow Abilities — Agent Skill
@@ -166,9 +166,9 @@ This is the ONE sanctioned exception to "don't edit workflow fields mid-step," a
 
 Most validation errors name the concrete problem (unknown keys, invalid assignee, bad destination, invalid enum value) — fix exactly what it names and retry.
 
-**Notification recipients must be valid assignee keys — there is no `submitter` recipient.** To email the person who submitted the entry (e.g. a reject notification telling an applicant the outcome), route the notification to the submission's **email field** (`email_field|{id}`) or a literal `email|{address}` — never a bare string like `"submitter"`. The selected recipients of an enabled notification are validated on save (`gravityflow_step_settings_invalid` names the bad key); a recipient of a notification that is switched off is not checked. So after configuring any step or reject/revert notification, confirm the recipient resolves to a real `type|id` / `email_field` target, and never report "the submitter will be notified" unless the recipient is a valid resolvable key. On a form that requires login, `entry|created_by` addresses the submitter's WordPress account. When the submitter is anonymous and no field captures the email, that's a genuine gap to hand back to the user — not something to paper over with a `submitter` placeholder.
+**Notification recipients must be valid assignee keys — there is no `submitter` recipient.** To email the person who submitted the entry (e.g. a reject notification telling an applicant the outcome), route the notification to the submission's **email field** (`email_field|{id}`) — never a bare string like `"submitter"`. The selected recipients of an enabled notification are validated on save (`gravityflow_step_settings_invalid` names the bad key); a recipient of a notification that is switched off is not checked. So after configuring any step or reject/revert notification, confirm the recipient resolves to a real `type|id` / `email_field` target, and never report "the submitter will be notified" unless the recipient is a valid resolvable key. On a form that requires login, `entry|created_by` addresses the submitter's WordPress account. When the submitter is anonymous and no field captures the email, that's a genuine gap to hand back to the user — not something to paper over with a `submitter` placeholder.
 
-**Email assignees need a front-end inbox link.** `email_field|{id}` and `email|{address}` assignees have no wp-admin access. Before writing `{workflow_entry_link}`, `{workflow_entry_url}`, or the other Flow URL merge tags (`workflow_inbox_*`, `workflow_approve_*`, `workflow_reject_*`, `workflow_revert_*`, `workflow_cancel_*`) on create/update:
+**Email assignees need a front-end inbox link.** `email_field|{id}` assignees have no wp-admin access. Before writing `{workflow_entry_link}`, `{workflow_entry_url}`, or the other Flow URL merge tags (`workflow_inbox_*`, `workflow_approve_*`, `workflow_reject_*`, `workflow_revert_*`, `workflow_cancel_*`) on create/update:
 
 1. Resolve a front-end page, in this order: (a) the request names a page (ID, URL, or title you can match); (b) sibling steps on this form already use `:page_id='N'` in a notification message (`steps-get`); (c) `system-info` → `default_pages.inbox` (a real page object, not `null`).
 2. Canonical tag when a page ID is known: `{workflow_entry_link: page_id='123'}` — quoted, with a space after the colon; the unquoted `{workflow_entry_link:page_id=N}` form is also parsed.
@@ -241,11 +241,12 @@ Field-resolved assignees resolve per entry when the step starts. `steps-get` sho
 | Tool absent from discovery | Admin hasn't enabled that tool (or GF's MCP is off) | Point to Forms → Settings → MCP (Gravity Flow metabox); no workarounds |
 | Building/modifying steps via `gravityforms/feeds-*` | Actively refused by Flow | Use `gravityflow/steps-create` / `steps-update` / `steps-order` / `steps-delete` |
 | Guessing settings keys on steps-create/update | Unknown keys rejected, nothing saved | Call `system-step-type-schema` first |
+| Sending `email|{address}` on steps-create/update because triage docs show that key | Invalid assignee, nothing saved | Use `user_id|{id}` or `email_field|{id}`; trust `assignees.items.kinds` over `first_class_inputs` prose |
 | Creating a `choice_routing` step to skip an optional stretch or to choose between 1–2 destinations | Extra auto-run step, destinations to maintain, Conditional logic still needed on skipped steps | Put `condition` on the steps that should run or skip |
 | A mapping row with a raw field ID as `key`, or a free text `value` | Refused with `Invalid field mapping` | Use a key choice or `gf_custom` + `custom_key`; a value choice or `gf_custom` + `custom_value` |
 | A feed step type missing from `steps-create` after an add-on activation | The type list was read when the tools registered | Reconnect the MCP client |
 | `steps-get` on an `update_user` step returns the summary without settings; `steps-update` / `steps-delete` return `gravityflow_ability_step_capability_required` | That step type needs `edit_users` | Name the capability; do not retry |
-| Using `submitter` (or a bare string) as a notification recipient | Refused on an enabled notification; stored unchecked on a disabled one | Route to the submission's `email_field|{id}`, `email|{address}`, or `entry|created_by` on a login-required form |
+| Using `submitter` (or a bare string) as a notification recipient | Refused on an enabled notification; stored unchecked on a disabled one | Route to the submission's `email_field|{id}` or `entry|created_by` on a login-required form |
 | Updating assignees on a step with in-flight entries without warning the user | The assignees of every in-flight entry are re-resolved | Echo the count-bearing confirmation only after the user confirms the blast radius |
 | Reordering steps on a form with pending entries without the count-bearing phrase | A destination of `next` follows the new order for those entries | Echo `REORDER STEP {id} AFTER {after_id} AFFECTING {n} ENTRIES` when the user already asked for this move, or after they confirm the blast radius |
 | Deleting a step other steps route to | Blocked — dangling destinations | Update the referencing steps' destinations first (the error names them) |

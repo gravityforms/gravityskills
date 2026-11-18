@@ -39,7 +39,7 @@ This policy is a **configurable step setting**, not a fixed law. If a workflow i
 |---|---|
 | `user_id|5` | WordPress user ID 5 |
 | `role|approver` | Every user with the role |
-| `email|pat@example.com` | An email address (may have no WP account) |
+| `email|pat@example.com` | Runtime key after `email_field` resolves (may have no WP account). Not a `steps-create` value |
 
 Step *configurations* may also use field-resolved types (`assignee_field`, `assignee_user_field`, `assignee_multi_user_field`, `assignee_role_field`, `email_field` — see Flow Field Types in SKILL.md) that resolve per entry at runtime — which is why `steps-get` shows configured assignees but only `workflow-status-get` shows an entry's actual ones.
 
